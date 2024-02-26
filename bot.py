@@ -22,7 +22,6 @@ cryptosCMC = {
     'solana': {'id': 5426, 'channel_id': int(os.getenv('SOL')), 'previous_price': None},
     'ethereum': {'id': 1027, 'channel_id': int(os.getenv('ETH')), 'previous_price': None},
     'bitcoin': {'id': 1, 'channel_id': int(os.getenv('BTC')), 'previous_price': None},
-    
 }
 
 cryptosCG = {
@@ -44,7 +43,7 @@ async def on_ready():
 
 
 
-@tasks.loop(seconds=600)
+@tasks.loop(seconds=810)
 async def change_channel_name_loop():
     global previous_price_jup  # Declare as global
     for crypto, info in cryptosCMC.items():
