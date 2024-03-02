@@ -15,6 +15,7 @@ previous_price = None
 previous_price_jup = None
 load_dotenv()
 Token = os.getenv('OL')
+client = commands.Bot(command_prefix="$", intents=discord.Intents.all())
 
 
 
@@ -32,7 +33,11 @@ cryptosCG = {
 
 cmc_api_key = os.getenv('CMC_API_KEY')
 
-
+thresholds = {
+    'solana': {'threshold': 150, 'increment': 30},
+    'ethereum': {'threshold': 3700, 'increment': 200},
+    'bitcoin': {'threshold': 65000, 'increment': 1000},
+}
 
 @client.event
 async def on_ready():
@@ -43,7 +48,7 @@ async def on_ready():
 
 
 
-@tasks.loop(seconds=810)
+@tasks.loop(seconds=840)
 async def change_channel_name_loop():
     global previous_price_jup  # Declare as global
     for crypto, info in cryptosCMC.items():
@@ -51,17 +56,44 @@ async def change_channel_name_loop():
         await update_channel(info['channel_id'], info['previous_price'], current_price, "", crypto.upper())
         info['previous_price'] = current_price
 
+        current_price_float = float(current_price)
+        threshold_float = float(thresholds[crypto]['threshold'])
+
+        if current_price_float > threshold_float:
+            channel = client.get_channel(1080342658901364777)
+            if channel:
+                message_content = f"DEGENS {crypto.capitalize()} chegou a {thresholds[crypto]['threshold']} @everyone!"
+                await channel.send(message_content)
+
+                thresholds[crypto]['threshold'] += thresholds[crypto]['increment']
+                print(f"Threshold for {crypto} increased to {thresholds[crypto]['threshold']}")
+
+
     for crypto, info in cryptosCG.items():
         current_price = get_coingecko_crypto_price(info['symbol'])
         await update_channel(info['channel_id'], info['previous_price'], current_price, "", crypto.upper())
         info['previous_price'] = current_price
         await asyncio.sleep(5)
+         
 
     current_price_jup = jupPrice()
     await update_channel(int(os.getenv('JUP')), previous_price_jup, current_price_jup, "", 'JUP')
     previous_price_jup = current_price_jup
 
     
+@client.command(name='setprice')
+async def set_threshold(ctx, crypto: str, value: float):
+    """
+    $setthreshold bitcoin 61000
+    """
+    global thresholds
+    crypto = crypto.lower()
+    if crypto in thresholds:
+        thresholds[crypto]['threshold'] = value
+        await ctx.send(f"Preço de alerta de {crypto.capitalize()} mudado para {value}")
+        print(f"Threshold for {crypto} increased to {thresholds[crypto]['threshold']}")
+    else:
+        await ctx.send(f"Escreves-te mal burro. É assim: {', '.join(thresholds.keys())}")
 
 
 async def update_channel(channel_id, previous_price, crypto_price, emoji, symbol):
@@ -88,7 +120,6 @@ async def update_channel(channel_id, previous_price, crypto_price, emoji, symbol
     else:
         print("Canal não encontrado.")
 
-
 def get_crypto_price(id):
     url = 'https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest'
     parameters = {'id': id}
@@ -96,10 +127,8 @@ def get_crypto_price(id):
         'Accepts': 'application/json',
         'X-CMC_PRO_API_KEY': cmc_api_key,
     }
-
     session = Session()
     session.headers.update(headers)
-
     try:
         response = session.get(url, params=parameters)
         response_json = response.json()
@@ -120,6 +149,7 @@ def get_coingecko_crypto_price(symbol):
             res = response_json[symbol]["usd"]
             formatted_price = "{:.3f}".format(res)
             return formatted_price
+        
             
         else:
             print(f"Key error: {symbol} or 'usd' not found in response.")
@@ -225,6 +255,8 @@ async def pricehour():
                      " - Degods: Ξ" + str(degodspricesall["floorPriceETH"]) +
                      " - Y00ts: Ξ" + str(y00tspriceall["floorPriceETH"]),
                      embed=embed)
+
+
 
 
 client.run(Token)
