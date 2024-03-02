@@ -66,7 +66,7 @@ async def change_channel_name_loop():
                 await channel.send(message_content)
 
                 thresholds[crypto]['threshold'] += thresholds[crypto]['increment']
-                print(f"Threshold for {crypto} increased to {thresholds[crypto]['threshold']}")
+                #print(f"Novo preço {crypto} aumentado para {thresholds[crypto]['threshold']}")
 
 
     for crypto, info in cryptosCG.items():
@@ -84,7 +84,7 @@ async def change_channel_name_loop():
 @client.command(name='setprice')
 async def set_threshold(ctx, crypto: str, value: float):
     """
-    $setthreshold bitcoin 61000
+    $setprice bitcoin 61000
     """
     global thresholds
     crypto = crypto.lower()
@@ -94,6 +94,15 @@ async def set_threshold(ctx, crypto: str, value: float):
         print(f"Threshold for {crypto} increased to {thresholds[crypto]['threshold']}")
     else:
         await ctx.send(f"Escreves-te mal burro. É assim: {', '.join(thresholds.keys())}")
+
+@client.command(name='checkprice')
+async def check_price(ctx):
+    """
+    $checkprice
+    """
+    global thresholds
+    thresholds_info = "\n".join([f"{crypto.capitalize()}: {info['threshold']}" for crypto, info in thresholds.items()])
+    await ctx.send(f"Preços de alerta: \n{thresholds_info}")
 
 
 async def update_channel(channel_id, previous_price, crypto_price, emoji, symbol):
