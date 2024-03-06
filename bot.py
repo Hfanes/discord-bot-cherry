@@ -7,6 +7,8 @@ from requests import Request, Session
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 from dotenv import load_dotenv
 import asyncio
+import sqlite3
+
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 client = commands.Bot(command_prefix="$", intents=discord.Intents.all())
@@ -16,7 +18,6 @@ previous_price_jup = None
 load_dotenv()
 Token = os.getenv('OL')
 client = commands.Bot(command_prefix="$", intents=discord.Intents.all())
-
 
 
 cryptosCMC = {
@@ -34,10 +35,22 @@ cryptosCG = {
 cmc_api_key = os.getenv('CMC_API_KEY')
 
 thresholds = {
-    'solana': {'threshold': 150, 'increment': 30},
-    'ethereum': {'threshold': 3700, 'increment': 200},
-    'bitcoin': {'threshold': 65000, 'increment': 1000},
+    'solana': {'threshold': 150, 'increment': 20},
+    'ethereum': {'threshold': 3800, 'increment': 200},
+    'bitcoin': {'threshold': 67000, 'increment': 1000},
 }
+
+
+conn = sqlite3.connect('thresholds.db')
+cursor = conn.cursor()
+
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS thresholds (
+        crypto TEXT PRIMARY KEY,
+        threshold FLOAT,
+        increment FLOAT
+    )
+''')
 
 @client.event
 async def on_ready():
@@ -46,28 +59,51 @@ async def on_ready():
     await asyncio.sleep(61)
     pricehour.start()
 
+    load_thresholds_from_db()
+    print(thresholds)
+
+# Função para carregar os valores iniciais de thresholds do banco de dados
+def load_thresholds_from_db():
+    global thresholds
+    cursor.execute('SELECT * FROM thresholds')
+    rows = cursor.fetchall()
+    if not rows:
+        # Se a tabela estiver vazia, insira os valores padrão
+        default_thresholds = {
+            'solana': {'threshold': 150, 'increment': 30},
+            'ethereum': {'threshold': 3700, 'increment': 200},
+            'bitcoin': {'threshold': 65000, 'increment': 1000},
+        }
+        for crypto, values in default_thresholds.items():
+            cursor.execute('INSERT INTO thresholds VALUES (?, ?, ?)', (crypto, values['threshold'], values['increment']))
+            conn.commit()
+    else:
+        # Se a tabela tiver valores, atualize a variável thresholds
+        thresholds = {row[0]: {'threshold': row[1], 'increment': row[2]} for row in rows}
+
 
 
 @tasks.loop(seconds=840)
 async def change_channel_name_loop():
-    global previous_price_jup  # Declare as global
+    global previous_price_jup
+    global thresholds
+    load_thresholds_from_db()
+
     for crypto, info in cryptosCMC.items():
-        current_price = get_crypto_price(info['id'])
-        await update_channel(info['channel_id'], info['previous_price'], current_price, "", crypto.upper())
-        info['previous_price'] = current_price
+       current_price = get_crypto_price(info['id'])
+       await update_channel(info['channel_id'], info['previous_price'], current_price, "", crypto.upper())
+       info['previous_price'] = current_price
+       current_price_float = float(current_price)
 
-        current_price_float = float(current_price)
-        threshold_float = float(thresholds[crypto]['threshold'])
-
-        if current_price_float > threshold_float:
-            channel = client.get_channel(1080342658901364777)
-            if channel:
-                message_content = f"DEGENS {crypto.capitalize()} chegou a {thresholds[crypto]['threshold']} @everyone!"
-                await channel.send(message_content)
-
-                thresholds[crypto]['threshold'] += thresholds[crypto]['increment']
-                #print(f"Novo preço {crypto} aumentado para {thresholds[crypto]['threshold']}")
-
+       threshold_float = float(thresholds[crypto]['threshold'])
+       if current_price_float > threshold_float:
+           channel = client.get_channel(1080342658901364777)
+           if channel:
+               message = f"DEGENS {crypto.capitalize()} chegou a {thresholds[crypto]['threshold']} @everyone!"
+               await channel.send(message)
+               # Atualizar o threshold no banco de dados
+               update_threshold_in_db(crypto, thresholds[crypto]['threshold'] + thresholds[crypto]['increment'])
+               thresholds[crypto]['threshold'] += thresholds[crypto]['increment']
 
     for crypto, info in cryptosCG.items():
         current_price = get_coingecko_crypto_price(info['symbol'])
@@ -80,29 +116,71 @@ async def change_channel_name_loop():
     await update_channel(int(os.getenv('JUP')), previous_price_jup, current_price_jup, "", 'JUP')
     previous_price_jup = current_price_jup
 
-    
+
+@client.command(name='commands')
+async def commands(ctx):
+    await ctx.send(f"$checkprice" + "\n" + "$setprice bitcoin 61000" + "\n" + "$setincrement bitcoin 100")
+
+
+@client.command(name='checkprice')
+async def check_price(ctx):
+    load_thresholds_from_db()
+    """
+    $checkprice
+    """
+    global thresholds
+    thresholds_info = "\n".join([f"{crypto.capitalize()}: {info['threshold']} - {info['increment']}" for crypto, info in thresholds.items()])
+    await ctx.send(f"Preços de alerta: \n{thresholds_info}")
+
 @client.command(name='setprice')
 async def set_threshold(ctx, crypto: str, value: float):
+    load_thresholds_from_db()
     """
     $setprice bitcoin 61000
     """
     global thresholds
     crypto = crypto.lower()
     if crypto in thresholds:
-        thresholds[crypto]['threshold'] = value
-        await ctx.send(f"Preço de alerta de {crypto.capitalize()} mudado para {value}")
-        print(f"Threshold for {crypto} increased to {thresholds[crypto]['threshold']}")
+        if thresholds[crypto]['threshold'] != value:
+            thresholds[crypto]['threshold'] = value
+            await ctx.send(f"Preço de alerta de {crypto.capitalize()} mudado para {value}")
+            update_threshold_in_db(crypto, value)
+            print(f"Threshold for {crypto} increased to {thresholds[crypto]['threshold']}")
+        else:
+            await ctx.send(f"O preço de alerta para {crypto.capitalize()} é {value}")
     else:
-        await ctx.send(f"Escreves-te mal burro. É assim: {', '.join(thresholds.keys())}")
+        await ctx.send(f"Escreveste mal, burro. É assim: {', '.join(thresholds.keys())}")
 
-@client.command(name='checkprice')
-async def check_price(ctx):
+@client.command(name='setincrement')
+async def set_increment(ctx, crypto: str, increment: float):
+    load_thresholds_from_db()
     """
-    $checkprice
+    $setincrement bitcoin 100
     """
     global thresholds
-    thresholds_info = "\n".join([f"{crypto.capitalize()}: {info['threshold']}" for crypto, info in thresholds.items()])
-    await ctx.send(f"Preços de alerta: \n{thresholds_info}")
+    crypto = crypto.lower()
+
+    if crypto in thresholds:
+        thresholds[crypto]['increment'] = increment
+        update_increment_in_db(crypto, increment)
+        await ctx.send(f"Incremento para {crypto.capitalize()} atualizado para {increment}")
+        print(f"Incremento para {crypto} atualizado para {increment}")
+    else:
+        await ctx.send(f"Escreveste mal, burro. É assim: {', '.join(thresholds.keys())}")
+
+
+# Função para atualizar um valor de threshold no banco de dados
+def update_threshold_in_db(crypto, threshold):
+    load_thresholds_from_db()
+    cursor.execute('UPDATE thresholds SET threshold = ? WHERE crypto = ?', (threshold, crypto))
+    thresholds[crypto]['threshold'] = threshold
+    conn.commit()
+
+# Função para atualizar um valor de increment no banco de dados
+def update_increment_in_db(crypto, increment):
+    load_thresholds_from_db()
+    cursor.execute('UPDATE thresholds SET increment = ? WHERE crypto = ?', (increment, crypto))
+    conn.commit()
 
 
 async def update_channel(channel_id, previous_price, crypto_price, emoji, symbol):
