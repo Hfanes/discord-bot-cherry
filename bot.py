@@ -89,20 +89,22 @@ async def change_channel_name_loop():
     load_thresholds_from_db()
 
     for crypto, info in cryptosCMC.items():
-       current_price = get_crypto_price(info['id'])
-       await update_channel(info['channel_id'], info['previous_price'], current_price, "", crypto.upper())
-       info['previous_price'] = current_price
-       current_price_float = float(current_price)
+        current_price = get_crypto_price(info['id'])
+        current_price_float = float(current_price)
+        threshold_float = float(thresholds[crypto]['threshold'])
 
-       threshold_float = float(thresholds[crypto]['threshold'])
-       if current_price_float > threshold_float:
-           channel = client.get_channel(1080342658901364777)
-           if channel:
-               message = f"DEGENS {crypto.capitalize()} chegou a {thresholds[crypto]['threshold']} @everyone!"
-               await channel.send(message)
-               # Atualizar o threshold no banco de dados
-               update_threshold_in_db(crypto, thresholds[crypto]['threshold'] + thresholds[crypto]['increment'])
-               thresholds[crypto]['threshold'] += thresholds[crypto]['increment']
+        if current_price_float > threshold_float:
+            channel = client.get_channel(1080342658901364777)
+            if channel:
+                message = f"DEGENS {crypto.capitalize()} chegou a {thresholds[crypto]['threshold']} @everyone!"
+                await channel.send(message)
+                # Atualizar o threshold no banco de dados
+                update_threshold_in_db(crypto, thresholds[crypto]['threshold'] + thresholds[crypto]['increment'])
+                thresholds[crypto]['threshold'] += thresholds[crypto]['increment']
+
+        # Move the update after the threshold check
+        await update_channel(info['channel_id'], info['previous_price'], current_price, "", crypto.upper())
+        info['previous_price'] = current_price
 
     for crypto, info in cryptosCG.items():
         current_price = get_coingecko_crypto_price(info['symbol'])
@@ -111,7 +113,7 @@ async def change_channel_name_loop():
         await asyncio.sleep(5)
          
 
-    current_price_jup = jupPrice()
+    current_price_jup = jupPrice()  
     await update_channel(int(os.getenv('JUP')), previous_price_jup, current_price_jup, "", 'JUP')
     previous_price_jup = current_price_jup
 
