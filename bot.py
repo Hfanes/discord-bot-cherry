@@ -35,9 +35,9 @@ cryptosCG = {
 cmc_api_key = os.getenv('CMC_API_KEY')
 
 thresholds = {
-    'solana': {'threshold': 150, 'increment': 20},
-    'ethereum': {'threshold': 4000, 'increment': 200},
-    'bitcoin': {'threshold': 68000, 'increment': 1000},
+    'solana': {'threshold': None, 'increment': None},
+    'ethereum': {'threshold': None, 'increment': None},
+    'bitcoin': {'threshold': None, 'increment': None},
 }
 
 
@@ -55,11 +55,12 @@ cursor.execute('''
 @client.event
 async def on_ready():
     print("Logged in as {0.user}".format(client))
+    thresholds = load_thresholds_from_db()
+    print(thresholds)
     change_channel_name_loop.start()
     await asyncio.sleep(61)
     pricehour.start()
-    load_thresholds_from_db()
-    print(thresholds)
+    
 
 # Função para carregar os valores iniciais de thresholds do banco de dados
 def load_thresholds_from_db():
@@ -69,9 +70,9 @@ def load_thresholds_from_db():
     if not rows:
         # Se a tabela estiver vazia, insira os valores padrão
         default_thresholds = {
-            'solana': {'threshold': 150, 'increment': 30},
-            'ethereum': {'threshold': 4000, 'increment': 200},
-            'bitcoin': {'threshold': 68000, 'increment': 1000},
+            'solana': {'threshold': 160, 'increment': 20},
+            'ethereum': {'threshold': 4200, 'increment': 200},
+            'bitcoin': {'threshold': 74000, 'increment': 1000},
         }
         for crypto, values in default_thresholds.items():
             cursor.execute('INSERT INTO thresholds VALUES (?, ?, ?)', (crypto, values['threshold'], values['increment']))
