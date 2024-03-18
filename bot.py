@@ -94,16 +94,15 @@ async def change_channel_name_loop():
         current_price_float = float(current_price)
         threshold_float = float(thresholds[crypto]['threshold'])
 
-        if current_price_float > threshold_float:
-            channel = client.get_channel(1080342658901364777)
-            if channel:
-                message = f"DEGENS {crypto.capitalize()} chegou a {thresholds[crypto]['threshold']} @everyone!"
-                await channel.send(message)
-                # Atualizar o threshold no banco de dados
-                update_threshold_in_db(crypto, thresholds[crypto]['threshold'] + thresholds[crypto]['increment'])
-                thresholds[crypto]['threshold'] += thresholds[crypto]['increment']
+        #if current_price_float > threshold_float:
+        #    channel = client.get_channel(1080342658901364777)
+        #    if channel:
+        #        message = f"DEGENS {crypto.capitalize()} chegou a {thresholds[crypto]['threshold']} @everyone!"
+        #        await channel.send(message)
+        #        # Atualizar o threshold no banco de dados
+        #        update_threshold_in_db(crypto, thresholds[crypto]['threshold'] + thresholds[crypto]['increment'])
+        #        thresholds[crypto]['threshold'] += thresholds[crypto]['increment']
 
-        # Move the update after the threshold check
         await update_channel(info['channel_id'], info['previous_price'], current_price, "", crypto.upper())
         info['previous_price'] = current_price
 
