@@ -30,6 +30,7 @@ cryptosCG = {
     'rune': {'symbol': 'thorchain','channel_id': int(os.getenv('RUNE')), 'previous_price': None},
     'doge': {'symbol': 'dogecoin','channel_id': int(os.getenv('DOGE')), 'previous_price': None},
     'ada': { 'symbol': 'cardano','channel_id': int(os.getenv('ADA')), 'previous_price': None},
+    'w' : { 'symbol': 'wormhole','channel_id': int(os.getenv('W')), 'previous_price': None},
 }
 
 cmc_api_key = os.getenv('CMC_API_KEY')
@@ -91,9 +92,8 @@ async def change_channel_name_loop():
 
     for crypto, info in cryptosCMC.items():
         current_price = get_crypto_price(info['id'])
-        current_price_float = float(current_price)
-        threshold_float = float(thresholds[crypto]['threshold'])
-
+        #current_price_float = float(current_price)
+        #threshold_float = float(thresholds[crypto]['threshold'])
         #if current_price_float > threshold_float:
         #    channel = client.get_channel(1080342658901364777)
         #    if channel:
@@ -236,9 +236,7 @@ def get_coingecko_crypto_price(symbol):
         if symbol in response_json and "usd" in response_json[symbol]:
             res = response_json[symbol]["usd"]
             formatted_price = "{:.3f}".format(res)
-            return formatted_price
-        
-            
+            return formatted_price            
         else:
             print(f"Key error: {symbol} or 'usd' not found in response.")
             return None
