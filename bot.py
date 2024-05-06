@@ -41,19 +41,10 @@ simple_api_key = os.getenv('simple_api_key')
 @client.event
 async def on_ready():
     print("Logged in as {0.user}".format(client))
-    change_channel_name_loop.start()
-    await asyncio.sleep(61)
-    pricehour.start()
+    #change_channel_name_loop.start()
+    #await asyncio.sleep(61)
+    #pricehour.start()
     
-
-@client.command(name='price')
-async def price(ctx, crypto: str):
-    crypto = crypto.lower()
-    try:
-        value = get_coingecko_crypto_price(crypto)
-        ctx.send(f"Preço de {crypto}: {value}$")
-    except Exception:
-            print(f"É preciso do API ID encontrado ná pagina da coin no site coingecko")
 
 
 @tasks.loop(seconds=840)
@@ -114,7 +105,7 @@ def get_crypto_price(id):
     return formatted_crypto_price
 
 
-def get_coingecko_crypto_price(symbol):
+async def get_coingecko_crypto_price(symbol):
     url = f"https://api.coingecko.com/api/v3/simple/price?ids={symbol}&vs_currencies=usd"
     try:
         response = requests.get(url)
@@ -129,6 +120,15 @@ def get_coingecko_crypto_price(symbol):
     except (ConnectionError, Timeout, TooManyRedirects) as e:
         print(e)
         return None
+    
+@client.command(name='price')
+async def price(ctx, crypto: str):
+    crypto = crypto.lower()
+    try:
+        value = await get_coingecko_crypto_price(crypto)
+        await ctx.send(f"Preço de {crypto}: {value}$")
+    except Exception:
+            print(f"É preciso do API ID encontrado ná pagina da coin no site coingecko")
 
 
 def dustprice():
