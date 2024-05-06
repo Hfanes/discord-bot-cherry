@@ -7,8 +7,7 @@ from requests import Request, Session
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 from dotenv import load_dotenv
 import asyncio
-import sqlite3
-
+import datetime
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 client = commands.Bot(command_prefix="$", intents=discord.Intents.all())
@@ -31,78 +30,36 @@ cryptosCG = {
     'doge': {'symbol': 'dogecoin','channel_id': int(os.getenv('DOGE')), 'previous_price': None},
     'ada': { 'symbol': 'cardano','channel_id': int(os.getenv('ADA')), 'previous_price': None},
     'w' : { 'symbol': 'wormhole','channel_id': int(os.getenv('W')), 'previous_price': None},
+    'wif' : { 'symbol': 'dogwifcoin','channel_id': int(os.getenv('WIF')), 'previous_price': None},
+    'jup' : { 'symbol': 'jupiter-exchange-solana','channel_id': int(os.getenv('JUP')), 'previous_price': None},
+    'dust' : { 'symbol': 'dust-protocol','channel_id': int(os.getenv('DUST')), 'previous_price': None},  
 }
 
 cmc_api_key = os.getenv('CMC_API_KEY')
-
-thresholds = {
-    'solana': {'threshold': None, 'increment': None},
-    'ethereum': {'threshold': None, 'increment': None},
-    'bitcoin': {'threshold': None, 'increment': None},
-}
-
-
-conn = sqlite3.connect('thresholds.db')
-cursor = conn.cursor()
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS thresholds (
-        crypto TEXT PRIMARY KEY,
-        threshold FLOAT,
-        increment FLOAT
-    )
-''')
+simple_api_key = os.getenv('simple_api_key')
 
 @client.event
 async def on_ready():
     print("Logged in as {0.user}".format(client))
-    thresholds = load_thresholds_from_db()
-    print(thresholds)
     change_channel_name_loop.start()
     await asyncio.sleep(61)
     pricehour.start()
     
 
-# Função para carregar os valores iniciais de thresholds do banco de dados
-def load_thresholds_from_db():
-    global thresholds
-    cursor.execute('SELECT * FROM thresholds')
-    rows = cursor.fetchall()
-    if not rows:
-        # Se a tabela estiver vazia, insira os valores padrão
-        default_thresholds = {
-            'solana': {'threshold': 160, 'increment': 20},
-            'ethereum': {'threshold': 4200, 'increment': 200},
-            'bitcoin': {'threshold': 74000, 'increment': 1000},
-        }
-        for crypto, values in default_thresholds.items():
-            cursor.execute('INSERT INTO thresholds VALUES (?, ?, ?)', (crypto, values['threshold'], values['increment']))
-            conn.commit()
-    else:
-        # Se a tabela tiver valores, atualize a variável thresholds
-        thresholds = {row[0]: {'threshold': row[1], 'increment': row[2]} for row in rows}
-
+@client.command(name='price')
+async def price(ctx, crypto: str):
+    crypto = crypto.lower()
+    try:
+        value = get_coingecko_crypto_price(crypto)
+        ctx.send(f"Preço de {crypto}: {value}$")
+    except Exception:
+            print(f"É preciso do API ID encontrado ná pagina da coin no site coingecko")
 
 
 @tasks.loop(seconds=840)
 async def change_channel_name_loop():
-    global previous_price_jup
-    global thresholds
-    load_thresholds_from_db()
-
     for crypto, info in cryptosCMC.items():
         current_price = get_crypto_price(info['id'])
-        #current_price_float = float(current_price)
-        #threshold_float = float(thresholds[crypto]['threshold'])
-        #if current_price_float > threshold_float:
-        #    channel = client.get_channel(1080342658901364777)
-        #    if channel:
-        #        message = f"DEGENS {crypto.capitalize()} chegou a {thresholds[crypto]['threshold']} @everyone!"
-        #        await channel.send(message)
-        #        # Atualizar o threshold no banco de dados
-        #        update_threshold_in_db(crypto, thresholds[crypto]['threshold'] + thresholds[crypto]['increment'])
-        #        thresholds[crypto]['threshold'] += thresholds[crypto]['increment']
-
         await update_channel(info['channel_id'], info['previous_price'], current_price, "", crypto.upper())
         info['previous_price'] = current_price
 
@@ -110,79 +67,8 @@ async def change_channel_name_loop():
         current_price = get_coingecko_crypto_price(info['symbol'])
         await update_channel(info['channel_id'], info['previous_price'], current_price, "", crypto.upper())
         info['previous_price'] = current_price
-        await asyncio.sleep(5)
+        await asyncio.sleep(10)
          
-
-    current_price_jup = jupPrice()  
-    await update_channel(int(os.getenv('JUP')), previous_price_jup, current_price_jup, "", 'JUP')
-    previous_price_jup = current_price_jup
-
-
-@client.command(name='commands')
-async def commands(ctx):
-    await ctx.send(f"$checkprice" + "\n" + "$setprice bitcoin 61000" + "\n" + "$setincrement bitcoin 100")
-
-
-@client.command(name='checkprice')
-async def check_price(ctx):
-    load_thresholds_from_db()
-    """
-    $checkprice
-    """
-    global thresholds
-    thresholds_info = "\n".join([f"{crypto.capitalize()}: {info['threshold']} - {info['increment']}" for crypto, info in thresholds.items()])
-    await ctx.send(f"Preços de alerta: \n{thresholds_info}")
-
-@client.command(name='setprice')
-async def set_threshold(ctx, crypto: str, value: float):
-    load_thresholds_from_db()
-    """
-    $setprice bitcoin 61000
-    """
-    global thresholds
-    crypto = crypto.lower()
-    if crypto in thresholds:
-        if thresholds[crypto]['threshold'] != value:
-            thresholds[crypto]['threshold'] = value
-            await ctx.send(f"Preço de alerta de {crypto.capitalize()} mudado para {value}")
-            update_threshold_in_db(crypto, value)
-            print(f"Threshold for {crypto} increased to {thresholds[crypto]['threshold']}")
-        else:
-            await ctx.send(f"O preço de alerta para {crypto.capitalize()} é {value}")
-    else:
-        await ctx.send(f"Escreveste mal, burro. É assim: {', '.join(thresholds.keys())}")
-
-@client.command(name='setincrement')
-async def set_increment(ctx, crypto: str, increment: float):
-    load_thresholds_from_db()
-    """
-    $setincrement bitcoin 100
-    """
-    global thresholds
-    crypto = crypto.lower()
-
-    if crypto in thresholds:
-        thresholds[crypto]['increment'] = increment
-        update_increment_in_db(crypto, increment)
-        await ctx.send(f"Incremento para {crypto.capitalize()} atualizado para {increment}")
-        print(f"Incremento para {crypto} atualizado para {increment}")
-    else:
-        await ctx.send(f"Escreveste mal, burro. É assim: {', '.join(thresholds.keys())}")
-
-
-# Função para atualizar um valor de threshold no banco de dados
-def update_threshold_in_db(crypto, threshold):
-    load_thresholds_from_db()
-    cursor.execute('UPDATE thresholds SET threshold = ? WHERE crypto = ?', (threshold, crypto))
-    thresholds[crypto]['threshold'] = threshold
-    conn.commit()
-
-# Função para atualizar um valor de increment no banco de dados
-def update_increment_in_db(crypto, increment):
-    load_thresholds_from_db()
-    cursor.execute('UPDATE thresholds SET increment = ? WHERE crypto = ?', (increment, crypto))
-    conn.commit()
-
 
 async def update_channel(channel_id, previous_price, crypto_price, emoji, symbol):
     channel = client.get_channel(channel_id)
@@ -238,23 +124,11 @@ def get_coingecko_crypto_price(symbol):
             formatted_price = "{:.3f}".format(res)
             return formatted_price            
         else:
-            print(f"Key error: {symbol} or 'usd' not found in response.")
+            print(f"Erro no symbol: {symbol}")
             return None
     except (ConnectionError, Timeout, TooManyRedirects) as e:
         print(e)
         return None
-
-
-
-def jupPrice():
-  url = "https://api.aevo.xyz/markets?asset=JUP"
-
-  headers = {"accept": "application/json"}
-
-  response = requests.get(url, headers=headers)
-  response_json = response.json()
-  jup_price = response_json[0]['mark_price']
-  return jup_price
 
 
 def dustprice():
@@ -262,7 +136,6 @@ def dustprice():
       "https://api.coingecko.com/api/v3/coins/dust-protocol?localization=false"
   )
   response_json = response.json()
-
   dustpricereturn = {
       "priceUSD":
       locale.currency(response_json["market_data"]["current_price"]["usd"]),
@@ -272,77 +145,60 @@ def dustprice():
   return dustpricereturn
 
 
-def degodsprice():
-  response = requests.get("https://api.coingecko.com/api/v3/nfts/degods")
-  response_json = response.json()
 
-  degods_pricesreturn = {
-      "floorPriceETH":
-      response_json["floor_price"]["native_currency"],
-      "floorPriceUSD":
-      locale.currency(response_json["floor_price"]["usd"], grouping=True),
-      "h24change":
-      response_json["floor_price_in_usd_24h_percentage_change"]
-  }
-  return degods_pricesreturn
+def degod_price():
+    headers = {
+        "accept": "application/json",
+        "X-API-KEY": simple_api_key,
+    }
+    today = datetime.date.today().isoformat()
+    url = f"https://api.simplehash.com/api/v0/nfts/floor_prices_v2/collection/f027e33134a07a0aa4fdbad5ccd3c281/daily?marketplace_ids=tensor&start_date={today}"
+    response = requests.get(url, headers=headers)
+    response_json = response.json()
+    pricelamp = response_json["floor_prices"][0]["floor_price"]
+    price = pricelamp / 1000000000
+    return price
 
+def y00t_price():
+    headers = {
+        "accept": "application/json",
+        "X-API-KEY": simple_api_key,
+    }
+    today = datetime.date.today().isoformat()
+    url = f"https://api.simplehash.com/api/v0/nfts/floor_prices_v2/collection/fddd6ff6f9e150f719b964d5f74e0734/daily?marketplace_ids=tensor&start_date={today}"
+    response = requests.get(url, headers=headers)
+    response_json = response.json()
+    pricelamp = response_json["floor_prices"][0]["floor_price"]
+    price = pricelamp / 1000000000
+    return price
 
-def y00tsprice():
-  response = requests.get("https://api.coingecko.com/api/v3/nfts/y00ts")
-  response_json = response.json()
+def gen3_price():
+    headers = {
+        "accept": "application/json",
+        "X-API-KEY": simple_api_key,
+    }
+    today = datetime.date.today().isoformat()
+    url = f"https://api.simplehash.com/api/v0/nfts/floor_prices_v2/collection/63615c86e27c4ea1cf34c651d8442d9f/daily?marketplace_ids=tensor&start_date={today}"
+    response = requests.get(url, headers=headers)
+    response_json = response.json()
+    pricelamp = response_json["floor_prices"][0]["floor_price"]
+    price = pricelamp / 1000000000
+    return price
 
-  y00ts_pricesreturn = {
-      "floorPriceETH":
-      response_json["floor_price"]["native_currency"],
-      "floorPriceUSD":
-      locale.currency(response_json["floor_price"]["usd"], grouping=True),
-      "h24change":
-      response_json["floor_price_in_usd_24h_percentage_change"]
-  }
-  return y00ts_pricesreturn
 
 
 @tasks.loop(seconds=14400)
 async def pricehour():
-  degodspricesall = degodsprice()
-  y00tspriceall = y00tsprice()
-  dustpriceall = dustprice()
-  channel = client.get_channel(1080342658901364777)
-  embed = discord.Embed(title="De Alert", color=0x4089e7)
-  embed.set_thumbnail(
-      url=
-      "https://assets.coingecko.com/nft_contracts/images/3145/small/degods.png?1680194340"
-  )
-  embed.add_field(name="Dust:",
-                  value=str(dustpriceall["priceUSD"]),
-                  inline=True)
-  embed.add_field(name="|", value="|", inline=True)
-  embed.add_field(name="24h Change: ",
-                  value=str(dustpriceall["h24change"]) + "%",
-                  inline=True)
-  embed.add_field(name="Degods: ",
-                  value="Ξ " + str(degodspricesall["floorPriceETH"]) + "\t" +
-                  str(degodspricesall["floorPriceUSD"]),
-                  inline=True)
-  embed.add_field(name="|", value="|", inline=True)
-  embed.add_field(name=" 24h Change:",
-                  value=str(degodspricesall["h24change"]) + "%",
-                  inline=True)
-  embed.add_field(name="Y00ts: ",
-                  value="Ξ " + str(y00tspriceall["floorPriceETH"]) + "\t" +
-                  str(y00tspriceall["floorPriceUSD"]),
-                  inline=True)
-  embed.add_field(name="|", value="|", inline=True)
-  embed.add_field(name=" 24h Change:",
-                  value=str(y00tspriceall["h24change"]) + "%",
-                  inline=True)
-  print("Delabs Prices")
-  await channel.send(content='Dust: ' + str(dustpriceall["priceUSD"]) +
-                     " - Degods: Ξ" + str(degodspricesall["floorPriceETH"]) +
-                     " - Y00ts: Ξ" + str(y00tspriceall["floorPriceETH"]),
-                     embed=embed)
+    dustpriceall = dustprice()
+    degod_prices = degod_price()
+    y00t_prices = y00t_price()
+    gen3_prices = gen3_price()
 
-
-
-
+    channel = client.get_channel(1080342658901364777)
+    
+    await channel.send(content='Dust: ' + str(dustpriceall["priceUSD"]) +
+                     " - Degods:  "   + str(degod_prices) + 
+                     " - Y00ts:  "   + str(y00t_prices) + 
+                     " - Gen3:  "  + str(gen3_prices))
+    
 client.run(Token)
