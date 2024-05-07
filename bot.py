@@ -1,3 +1,4 @@
+import aiohttp
 import discord
 from discord.ext import commands, tasks
 import os
@@ -11,12 +12,9 @@ import datetime
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 client = commands.Bot(command_prefix="$", intents=discord.Intents.all())
-stop = False
 previous_price = None
-previous_price_jup = None
 load_dotenv()
 Token = os.getenv('OL')
-client = commands.Bot(command_prefix="$", intents=discord.Intents.all())
 
 
 cryptosCMC = {
@@ -32,7 +30,6 @@ cryptosCG = {
     'w' : { 'symbol': 'wormhole','channel_id': int(os.getenv('W')), 'previous_price': None},
     'wif' : { 'symbol': 'dogwifcoin','channel_id': int(os.getenv('WIF')), 'previous_price': None},
     'jup' : { 'symbol': 'jupiter-exchange-solana','channel_id': int(os.getenv('JUP')), 'previous_price': None},
-    'dust' : { 'symbol': 'dust-protocol','channel_id': int(os.getenv('DUST')), 'previous_price': None},  
 }
 
 cmc_api_key = os.getenv('CMC_API_KEY')
@@ -63,7 +60,6 @@ async def change_channel_name_loop():
 
 async def update_channel(channel_id, previous_price, crypto_price, emoji, symbol):
     channel = client.get_channel(channel_id)
-
     if channel:
         try:
             if previous_price is not None:
@@ -105,7 +101,7 @@ def get_crypto_price(id):
     return formatted_crypto_price
 
 
-async def get_coingecko_crypto_price(symbol):
+def get_coingecko_crypto_price(symbol):
     url = f"https://api.coingecko.com/api/v3/simple/price?ids={symbol}&vs_currencies=usd"
     try:
         response = requests.get(url)
@@ -121,11 +117,28 @@ async def get_coingecko_crypto_price(symbol):
         print(e)
         return None
     
+async def command_get_price(symbol):
+    url = f"https://api.coingecko.com/api/v3/simple/price?ids={symbol}&vs_currencies=usd"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                response_json = await response.json()
+                if symbol in response_json and "usd" in response_json[symbol]:
+                    res = response_json[symbol]["usd"]
+                    formatted_price = "{:.3f}".format(res)
+                    return formatted_price
+                else:
+                    print(f"Error in symbol: {symbol}")
+                    return None
+    except aiohttp.ClientError as e:
+        print(e)
+        return None
+    
 @client.command(name='price')
 async def price(ctx, crypto: str):
     crypto = crypto.lower()
     try:
-        value = await get_coingecko_crypto_price(crypto)
+        value = await command_get_price(crypto)
         await ctx.send(f"Preço de {crypto}: {value}$")
     except Exception:
             print(f"É preciso do API ID encontrado ná pagina da coin no site coingecko")
