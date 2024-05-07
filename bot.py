@@ -41,9 +41,9 @@ simple_api_key = os.getenv('simple_api_key')
 @client.event
 async def on_ready():
     print("Logged in as {0.user}".format(client))
-    #change_channel_name_loop.start()
-    #await asyncio.sleep(61)
-    #pricehour.start()
+    change_channel_name_loop.start()
+    await asyncio.sleep(61)
+    pricehour.start()
     
 
 
