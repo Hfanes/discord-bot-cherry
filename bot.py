@@ -1,3 +1,5 @@
+import json
+import typing
 import aiohttp
 import discord
 from discord.ext import commands, tasks
@@ -9,12 +11,23 @@ from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 from dotenv import load_dotenv
 import asyncio
 import datetime
+from discord import app_commands
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-client = commands.Bot(command_prefix="$", intents=discord.Intents.all())
+intentes = discord.Intents.all()
+bot = commands.Bot(command_prefix="!", intents=intentes)
 previous_price = None
 load_dotenv()
 Token = os.getenv('OL')
+
+
+response = requests.get("https://api.coingecko.com/api/v3/coins/list")
+if response.status_code == 200:
+    data = response.json()
+    ids = [item['id'] for item in data]
+    # print(ids)
+    # with open('ids.json', 'w') as json_file:
+    #     json.dump(ids, json_file)
 
 
 cryptosCMC = {
@@ -35,14 +48,51 @@ cryptosCG = {
 cmc_api_key = os.getenv('CMC_API_KEY')
 simple_api_key = os.getenv('simple_api_key')
 
-@client.event
+@bot.event
 async def on_ready():
-    print("Logged in as {0.user}".format(client))
+    print("Logged in as {0.user}".format(bot))
     change_channel_name_loop.start()
     await asyncio.sleep(61)
     pricehour.start()
+    await bot.tree.sync()
     
 
+ 
+@bot.tree.command(name= "sync", description="to sync")
+async def sync (interaction: discord.Interaction):
+    await interaction.response.send_message("Syncing...")
+    await bot.tree.sync()
+    print("Synced")
+
+
+
+@bot.tree.command(description="Coin price", name="price")
+async def price(interaction: discord.Interaction, id: str):
+    id = id.lower()
+    try:
+        value = await command_get_price(id)
+        await interaction.response.send_message(f"Preço de {id}: {value}$")
+    except Exception:
+        interaction.response.send_message(f"É preciso do API ID encontrado ná pagina da coin no site coingecko")
+        return
+    
+
+
+@price.autocomplete("id")
+async def coin_autocomplete(
+    interaction: discord.Interaction,
+    current: str
+) -> typing.List[app_commands.Choice[str]]:
+    filtered_ids = []
+    for id_choice in ids:
+     if current.lower() in id_choice.lower():
+        filtered_ids.append(id_choice)
+    choices = [
+        app_commands.Choice[str](name=id_choice, value=id_choice) 
+        for id_choice in filtered_ids[:25]
+    ]
+    return choices
+    
 
 @tasks.loop(seconds=840)
 async def change_channel_name_loop():
@@ -59,7 +109,7 @@ async def change_channel_name_loop():
          
 
 async def update_channel(channel_id, previous_price, crypto_price, emoji, symbol):
-    channel = client.get_channel(channel_id)
+    channel = bot.get_channel(channel_id)
     if channel:
         try:
             if previous_price is not None:
@@ -133,15 +183,8 @@ async def command_get_price(symbol):
     except aiohttp.ClientError as e:
         print(e)
         return None
-    
-@client.command(name='price')
-async def price(ctx, crypto: str):
-    crypto = crypto.lower()
-    try:
-        value = await command_get_price(crypto)
-        await ctx.send(f"Preço de {crypto}: {value}$")
-    except Exception:
-            print(f"É preciso do API ID encontrado ná pagina da coin no site coingecko")
+
+
 
 
 def dustprice():
@@ -207,11 +250,11 @@ async def pricehour():
     y00t_prices = y00t_price()
     gen3_prices = gen3_price()
 
-    channel = client.get_channel(1080342658901364777)
+    channel = bot.get_channel(1080342658901364777)
     
     await channel.send(content='Dust: ' + str(dustpriceall["priceUSD"]) +
                      " - Degods:  "   + str(degod_prices) + 
                      " - Y00ts:  "   + str(y00t_prices) + 
                      " - Gen3:  "  + str(gen3_prices))
     
-client.run(Token)
+bot.run(Token)
