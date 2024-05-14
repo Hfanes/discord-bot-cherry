@@ -19,16 +19,35 @@ bot = commands.Bot(command_prefix="!", intents=intentes)
 previous_price = None
 load_dotenv()
 Token = os.getenv('OL')
-
+cmc_api_key = os.getenv('CMC_API_KEY')
+simple_api_key = os.getenv('simple_api_key')
 
 response = requests.get("https://api.coingecko.com/api/v3/coins/list")
 if response.status_code == 200:
     data = response.json()
     ids = [item['id'] for item in data]
-    # print(ids)
-    # with open('ids.json', 'w') as json_file:
-    #     json.dump(ids, json_file)
 
+nfturl = "https://api.simplehash.com/api/v0/nfts/collections/top_v2?chains=solana&time_period=24h&limit=100"
+headers = {
+        "accept": "application/json",
+        "X-API-KEY": simple_api_key,
+    }
+responsenft = requests.get(nfturl, headers=headers)
+if responsenft.status_code == 200:
+    data = responsenft.json()
+    collections_dict = {}
+    for collection in data["collections"]:
+        collection_details = collection.get("collection_details", {})
+        if collection_details:
+            name = collection_details.get("name")
+            collection_id = collection_details.get("collection_id")
+            collections_dict[collection_id] = name
+    print(collections_dict)
+
+    # for collection_id, name in collections_dict.items():
+        # print(name, collection_id)
+            
+ 
 
 cryptosCMC = {
     'solana': {'id': 5426, 'channel_id': int(os.getenv('SOL')), 'previous_price': None},
@@ -45,16 +64,15 @@ cryptosCG = {
     'jup' : { 'symbol': 'jupiter-exchange-solana','channel_id': int(os.getenv('JUP')), 'previous_price': None},
 }
 
-cmc_api_key = os.getenv('CMC_API_KEY')
-simple_api_key = os.getenv('simple_api_key')
+
 
 @bot.event
 async def on_ready():
     print("Logged in as {0.user}".format(bot))
-    change_channel_name_loop.start()
-    await asyncio.sleep(61)
-    pricehour.start()
-    await bot.tree.sync()
+    #change_channel_name_loop.start()
+    #await asyncio.sleep(61)
+    #pricehour.start()
+    #await bot.tree.sync()
     
 
  
@@ -77,7 +95,6 @@ async def price(interaction: discord.Interaction, id: str):
         return
     
 
-
 @price.autocomplete("id")
 async def coin_autocomplete(
     interaction: discord.Interaction,
@@ -93,6 +110,38 @@ async def coin_autocomplete(
     ]
     return choices
     
+@bot.tree.command(description="Nft price top 100", name="nft")
+async def nft(interaction: discord.Interaction, nft: str):
+    nft = nft.lower()
+    nft_id = None
+    for id_, name in collections_dict.items():
+        if name.lower() == nft:
+            nft_id = id_
+            break
+    if nft_id:
+        try:
+            value = await command_nft_price(nft_id)
+            await interaction.response.send_message(f"Preço de {nft}: {value} SOL")
+        except Exception:
+            interaction.response.send_message(f"Nft incorreto")
+            return
+    else:
+        interaction.response.send_message(f"Nft não encontrado")
+    
+@nft.autocomplete("nft")
+async def nft_autocomplete(
+    interaction: discord.Interaction,
+    current: str
+) -> typing.List[app_commands.Choice[str]]:
+    filtered_nft = []
+    for nft_id, nft_name in collections_dict.items():
+        if current.lower() in nft_name.lower():
+            filtered_nft.append(nft_name)
+    choicesnft = [
+        app_commands.Choice[str](name=nft_name, value=nft_name) 
+        for nft_name in filtered_nft[:25]
+    ]
+    return choicesnft
 
 @tasks.loop(seconds=840)
 async def change_channel_name_loop():
@@ -184,6 +233,21 @@ async def command_get_price(symbol):
         print(e)
         return None
 
+async def command_nft_price(nftid):
+    headers = {
+        "accept": "application/json",
+        "X-API-KEY": simple_api_key,
+    }
+    today = datetime.date.today().isoformat()
+    url = f"https://api.simplehash.com/api/v0/nfts/floor_prices_v2/collection/{nftid}/daily?marketplace_ids=tensor&start_date={today}"
+    print(url)
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=headers) as response:
+            response_json = await response.json()
+            pricelamp = response_json["floor_prices"][0]["floor_price"]
+            price = pricelamp / 1000000000
+            return price
 
 
 
@@ -199,7 +263,6 @@ def dustprice():
       response_json["market_data"]["price_change_percentage_24h"]
   }
   return dustpricereturn
-
 
 
 def degod_price():
