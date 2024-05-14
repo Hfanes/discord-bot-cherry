@@ -69,12 +69,11 @@ cryptosCG = {
 @bot.event
 async def on_ready():
     print("Logged in as {0.user}".format(bot))
-    #change_channel_name_loop.start()
-    #await asyncio.sleep(61)
-    #pricehour.start()
-    #await bot.tree.sync()
+    change_channel_name_loop.start()
+    await asyncio.sleep(61)
+    pricehour.start()
+    await bot.tree.sync()
     
-
  
 @bot.tree.command(name= "sync", description="to sync")
 async def sync (interaction: discord.Interaction):
@@ -94,7 +93,6 @@ async def price(interaction: discord.Interaction, id: str):
         interaction.response.send_message(f"É preciso do API ID encontrado ná pagina da coin no site coingecko")
         return
     
-
 @price.autocomplete("id")
 async def coin_autocomplete(
     interaction: discord.Interaction,
@@ -134,7 +132,7 @@ async def nft_autocomplete(
     current: str
 ) -> typing.List[app_commands.Choice[str]]:
     filtered_nft = []
-    for nft_id, nft_name in collections_dict.items():
+    for nft_name in collections_dict.items():
         if current.lower() in nft_name.lower():
             filtered_nft.append(nft_name)
     choicesnft = [
@@ -239,9 +237,7 @@ async def command_nft_price(nftid):
         "X-API-KEY": simple_api_key,
     }
     today = datetime.date.today().isoformat()
-    url = f"https://api.simplehash.com/api/v0/nfts/floor_prices_v2/collection/{nftid}/daily?marketplace_ids=tensor&start_date={today}"
-    print(url)
-    
+    url = f"https://api.simplehash.com/api/v0/nfts/floor_prices_v2/collection/{nftid}/daily?marketplace_ids=tensor&start_date={today}"   
     async with aiohttp.ClientSession() as session:
         async with session.get(url, headers=headers) as response:
             response_json = await response.json()
