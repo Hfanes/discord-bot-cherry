@@ -44,9 +44,6 @@ if responsenft.status_code == 200:
             collections_dict[collection_id] = name
     print(collections_dict)
 
-    # for collection_id, name in collections_dict.items():
-        # print(name, collection_id)
-            
  
 
 cryptosCMC = {
@@ -80,7 +77,6 @@ async def sync (interaction: discord.Interaction):
     await interaction.response.send_message("Syncing...")
     await bot.tree.sync()
     print("Synced")
-
 
 
 @bot.tree.command(description="Coin price", name="price")
@@ -117,14 +113,8 @@ async def nft(interaction: discord.Interaction, nft: str):
             nft_id = id_
             break
     if nft_id:
-        try:
-            value = await command_nft_price(nft_id)
-            await interaction.response.send_message(f"Preço de {nft}: {value} SOL")
-        except Exception:
-            interaction.response.send_message(f"Nft incorreto")
-            return
-    else:
-        interaction.response.send_message(f"Nft não encontrado")
+        value = await command_nft_price(nft_id)
+        await interaction.response.send_message(f"Preço de {nft}: {value} SOL")
     
 @nft.autocomplete("nft")
 async def nft_autocomplete(
@@ -132,9 +122,9 @@ async def nft_autocomplete(
     current: str
 ) -> typing.List[app_commands.Choice[str]]:
     filtered_nft = []
-    for nft_name in collections_dict.items():
-        if current.lower() in nft_name.lower():
-            filtered_nft.append(nft_name)
+    for nft_id, nft_name in collections_dict.items():
+     if current.lower() in nft_name.lower():
+        filtered_nft.append(nft_name)
     choicesnft = [
         app_commands.Choice[str](name=nft_name, value=nft_name) 
         for nft_name in filtered_nft[:25]
