@@ -42,7 +42,7 @@ if responsenft.status_code == 200:
             name = collection_details.get("name")
             collection_id = collection_details.get("collection_id")
             collections_dict[collection_id] = name
-    print(collections_dict)
+    #print(collections_dict)
 
  
 
@@ -142,6 +142,8 @@ async def change_channel_name_loop():
         await update_channel(info['channel_id'], info['previous_price'], current_price, "", crypto.upper())
         info['previous_price'] = current_price
         await asyncio.sleep(10)
+    channel = bot.get_channel(1080342658901364777)
+    await channel.send(content="Preços atualizados")
          
 
 async def update_channel(channel_id, previous_price, crypto_price, emoji, symbol):
