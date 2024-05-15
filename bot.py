@@ -67,8 +67,7 @@ cryptosCG = {
 async def on_ready():
     print("Logged in as {0.user}".format(bot))
     change_channel_name_loop.start()
-    await asyncio.sleep(61)
-    pricehour.start()
+    await asyncio.sleep(80)
     await bot.tree.sync()
     
  
@@ -236,74 +235,5 @@ async def command_nft_price(nftid):
             return price
 
 
-
-def dustprice():
-  response = requests.get(
-      "https://api.coingecko.com/api/v3/coins/dust-protocol?localization=false"
-  )
-  response_json = response.json()
-  dustpricereturn = {
-      "priceUSD":
-      locale.currency(response_json["market_data"]["current_price"]["usd"]),
-      "h24change":
-      response_json["market_data"]["price_change_percentage_24h"]
-  }
-  return dustpricereturn
-
-
-def degod_price():
-    headers = {
-        "accept": "application/json",
-        "X-API-KEY": simple_api_key,
-    }
-    today = datetime.date.today().isoformat()
-    url = f"https://api.simplehash.com/api/v0/nfts/floor_prices_v2/collection/f027e33134a07a0aa4fdbad5ccd3c281/daily?marketplace_ids=tensor&start_date={today}"
-    response = requests.get(url, headers=headers)
-    response_json = response.json()
-    pricelamp = response_json["floor_prices"][0]["floor_price"]
-    price = pricelamp / 1000000000
-    return price
-
-def y00t_price():
-    headers = {
-        "accept": "application/json",
-        "X-API-KEY": simple_api_key,
-    }
-    today = datetime.date.today().isoformat()
-    url = f"https://api.simplehash.com/api/v0/nfts/floor_prices_v2/collection/fddd6ff6f9e150f719b964d5f74e0734/daily?marketplace_ids=tensor&start_date={today}"
-    response = requests.get(url, headers=headers)
-    response_json = response.json()
-    pricelamp = response_json["floor_prices"][0]["floor_price"]
-    price = pricelamp / 1000000000
-    return price
-
-def gen3_price():
-    headers = {
-        "accept": "application/json",
-        "X-API-KEY": simple_api_key,
-    }
-    today = datetime.date.today().isoformat()
-    url = f"https://api.simplehash.com/api/v0/nfts/floor_prices_v2/collection/63615c86e27c4ea1cf34c651d8442d9f/daily?marketplace_ids=tensor&start_date={today}"
-    response = requests.get(url, headers=headers)
-    response_json = response.json()
-    pricelamp = response_json["floor_prices"][0]["floor_price"]
-    price = pricelamp / 1000000000
-    return price
-
-
-
-@tasks.loop(seconds=14400)
-async def pricehour():
-    dustpriceall = dustprice()
-    degod_prices = degod_price()
-    y00t_prices = y00t_price()
-    gen3_prices = gen3_price()
-
-    channel = bot.get_channel(1080342658901364777)
-    
-    await channel.send(content='Dust: ' + str(dustpriceall["priceUSD"]) +
-                     " - Degods:  "   + str(degod_prices) + 
-                     " - Y00ts:  "   + str(y00t_prices) + 
-                     " - Gen3:  "  + str(gen3_prices))
     
 bot.run(Token)
