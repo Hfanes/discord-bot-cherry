@@ -55,7 +55,6 @@ cryptosCMC = {
 cryptosCG = {
     'rune': {'symbol': 'thorchain','channel_id': int(os.getenv('RUNE')), 'previous_price': None},
     'doge': {'symbol': 'dogecoin','channel_id': int(os.getenv('DOGE')), 'previous_price': None},
-    'ada': { 'symbol': 'cardano','channel_id': int(os.getenv('ADA')), 'previous_price': None},
     'w' : { 'symbol': 'wormhole','channel_id': int(os.getenv('W')), 'previous_price': None},
     'wif' : { 'symbol': 'dogwifcoin','channel_id': int(os.getenv('WIF')), 'previous_price': None},
     'jup' : { 'symbol': 'jupiter-exchange-solana','channel_id': int(os.getenv('JUP')), 'previous_price': None},
@@ -142,7 +141,7 @@ async def change_channel_name_loop():
         await update_channel(info['channel_id'], info['previous_price'], current_price, "", crypto.upper())
         info['previous_price'] = current_price
         await asyncio.sleep(10)
-    channel = bot.get_channel(1080342658901364777)
+    channel = bot.get_channel(1241427161488035841)
     await channel.send(content="Preços atualizados")
          
 
@@ -236,6 +235,4 @@ async def command_nft_price(nftid):
             price = pricelamp / 1000000000
             return price
 
-
-    
 bot.run(Token)
