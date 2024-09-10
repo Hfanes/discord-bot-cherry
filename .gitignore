@@ -1,2 +1,10 @@
 # Ignore .env files
 .env
+# IDE and editor folders
+.idea/
+
+# Python bytecode and cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
