@@ -1,8 +1,5 @@
 import datetime
 import aiohttp
-import os
-
-import requests
 from config.settings import CMC_API_KEY,SIMPLE_API_KEY
 
 
@@ -64,7 +61,7 @@ async def fetch_nft_collections():
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(nfturl, headers=headers) as response:
-                data = await response.json()  # Ensure to await the JSON decoding
+                data = await response.json()
                 collections_dict = {}
                 for collection in data.get("collections", []):
                     collection_details = collection.get("collection_details", {})

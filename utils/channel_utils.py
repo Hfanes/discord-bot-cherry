@@ -14,11 +14,11 @@ async def update_channel(bot, channel_id, previous_price, crypto_price, emoji, s
 
             if isinstance(channel, discord.VoiceChannel):
                 await channel.edit(name=new_channel_name)
-                print(f"Nome do canal de voz alterado para: {new_channel_name}")
+                print(f"Channel updated: {new_channel_name}")
             else:
-                print("Canal não é um canal de voz.")
+                print("Not a voice channel.")
             previous_price = crypto_price
         except Exception as e:
-            print(f"Erro ao obter dados do preço: {e}")
+            print(f"Error: {e}")
     else:
-        print("Canal não encontrado.")
+        print("Channel not found.")

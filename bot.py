@@ -1,22 +1,17 @@
-import datetime
 import os
-import aiohttp
 import discord
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
-import requests
 from utils.api_utils import command_get_price, command_nft_price, fetch_coingecko_ids, fetch_nft_collections, get_coingecko_crypto_price, get_crypto_price
 from utils.channel_utils import update_channel
 import asyncio
 from discord import app_commands
 import typing
-from config.settings import SIMPLE_API_KEY
-simple_api_key = SIMPLE_API_KEY
 
 load_dotenv()
 TOKEN = os.getenv('OL')
-ids = []
-collections_dict = {}
+coins_100_ids = []
+collections_nft = {}
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -44,25 +39,27 @@ async def on_ready():
     await bot.tree.sync()
 
 async def setup_data():
-    global ids, collections_dict
-    ids = await fetch_coingecko_ids()
-    collections_dict = await fetch_nft_collections()
+    global coins_100_ids, collections_nft
+    coins_100_ids = await fetch_coingecko_ids()
+    collections_nft = await fetch_nft_collections()
+
 
 @tasks.loop(seconds=840)
 async def change_channel_name_loop():
     for crypto, info in cryptosCMC.items():
         current_price = await get_crypto_price(info['id'])
+        if current_price is None:
+            continue
         await update_channel(bot, info['channel_id'], info['previous_price'], current_price, "", crypto.upper())
         info['previous_price'] = current_price
 
     for crypto, info in cryptosCG.items():
         current_price = await get_coingecko_crypto_price(info['symbol'])
+        if current_price is None:
+            continue
         await update_channel(bot, info['channel_id'], info['previous_price'], current_price, "", crypto.upper())
         info['previous_price'] = current_price
         await asyncio.sleep(10)
-    channel = bot.get_channel(1241427161488035841)
-    if channel:
-        await channel.send(content="Preços atualizados")
 
         
 @bot.tree.command(description="Coin price", name="price")
@@ -72,7 +69,7 @@ async def price(interaction: discord.Interaction, id: str):
         value = await command_get_price(id)
         await interaction.response.send_message(f"Preço de {id}: {value}$")
     except Exception:
-        interaction.response.send_message(f"É preciso do API ID encontrado ná pagina da coin no site coingecko")
+        interaction.response.send_message(f"You need the API ID - coingecko website")
         return
     
 @price.autocomplete("id")
@@ -81,7 +78,7 @@ async def coin_autocomplete(
     current: str
 ) -> typing.List[app_commands.Choice[str]]:
     filtered_ids = []
-    for id_choice in ids:
+    for id_choice in coins_100_ids:
      if current.lower() in id_choice.lower():
         filtered_ids.append(id_choice)
     choices = [
@@ -94,7 +91,7 @@ async def coin_autocomplete(
 async def nft(interaction: discord.Interaction, nft: str):
     nft = nft.lower()
     nft_id = None
-    for id_, name in collections_dict.items():
+    for id_, name in collections_nft.items():
         if name.lower() == nft:
             nft_id = id_
             break
@@ -108,7 +105,7 @@ async def nft_autocomplete(
     current: str
 ) -> typing.List[app_commands.Choice[str]]:
     filtered_nft = []
-    for nft_id, nft_name in collections_dict.items():
+    for nft_id, nft_name in collections_nft.items():
      if current.lower() in nft_name.lower():
         filtered_nft.append(nft_name)
     choicesnft = [
