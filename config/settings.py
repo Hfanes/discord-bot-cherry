@@ -5,6 +5,7 @@ load_dotenv()
 
 CMC_API_KEY = os.getenv('CMC_API_KEY')
 SIMPLE_API_KEY = os.getenv('simple_api_key')
+DB_URL = os.getenv('DB_URL')
 
 SOL_CHANNEL_ID = int(os.getenv('SOL'))
 ETH_CHANNEL_ID = int(os.getenv('ETH'))

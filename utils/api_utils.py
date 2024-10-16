@@ -108,3 +108,20 @@ async def command_get_price(symbol):
     except aiohttp.ClientError as e:
         print(e)
         return None
+    
+
+async def fetch_chart(crypto, days=30):
+    url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
+    params = {'vs_currency': 'usd', 'days': days}
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, params=params) as response:
+                if response.status == 200:
+                    response_json = await response.json()
+                    return response_json
+                else:
+                    print(f"Error: Received status code {response.status}")
+                    return None
+    except aiohttp.ClientError as e:
+        print(f"HTTP Error: {e}")
+        return None

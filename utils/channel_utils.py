@@ -6,9 +6,9 @@ async def update_channel(bot, channel_id, previous_price, crypto_price, emoji, s
         try:
             if previous_price is not None:
                 if crypto_price > previous_price:
-                    emoji = "🟢"
+                    emoji = "🟢↘️"
                 elif crypto_price < previous_price:
-                    emoji = "🔴"
+                    emoji = "🔴↗️"
 
             new_channel_name = f"{emoji}{symbol}: ${crypto_price}"
 
