@@ -6,3 +6,4 @@ requests==2.31.0
 yarl==1.9.4
 asyncpg
 matplotlib
+Pillow

@@ -125,3 +125,23 @@ async def fetch_chart(crypto, days=30):
     except aiohttp.ClientError as e:
         print(f"HTTP Error: {e}")
         return None
+    
+async def get_logo(crypto):
+    url = f'https://pro-api.coinmarketcap.com/v2/cryptocurrency/info'
+    params = {'slug': crypto}
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, params=params) as response:
+                if response.status == 200:
+                    response_json = await response.json()
+                    for key in response_json["data"]:
+                            logo = response_json["data"][key]["logo"]
+                            name = response_json["data"][key]["name"]
+                            return logo, name
+                    return logo, name
+                else:
+                    print(f"Error: Received status code {response.status}")
+                    return None
+    except aiohttp.ClientError as e:
+        print(f"HTTP Error: {e}")
+        return None
