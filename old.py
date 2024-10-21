@@ -75,11 +75,11 @@ async def create(interaction: discord.Interaction, channel_name: str):
 
         
 @bot.tree.command(description="Coin price", name="price")
-async def price(interaction: discord.Interaction, id: str):
-    id = id.lower()
+async def price(interaction: discord.Interaction, symbol: str):
+    symbol = symbol.lower()
     try:
-        value = await command_get_price(id)
-        await interaction.response.send_message(f"Preço de {id}: {value}$")
+        value = await get_coingecko_crypto_price(symbol)
+        await interaction.response.send_message(f"Preço de {symbol}: {value}$")
     except Exception:
         interaction.response.send_message(f"You need the API ID - coingecko website")
         return

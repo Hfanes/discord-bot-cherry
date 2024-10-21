@@ -11,6 +11,9 @@ simple_api_key = SIMPLE_API_KEY
 
 
 async def get_crypto_price(crypto):
+    """
+    Get price of a coin (COINMARKETCAP)
+    """
     url = 'https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest'
     params = {'slug': crypto}
     try:
@@ -24,18 +27,21 @@ async def get_crypto_price(crypto):
                             change7d = response_json["data"][key]['quote']['USD']['percent_change_7d']
                             change30d = response_json["data"][key]['quote']['USD']['percent_change_30d']
                             market_cap = response_json["data"][key]['quote']['USD']['market_cap']
-                            formatted_price = "{:.2f}".format(price)
-                            formatted_change1h = "{:.2f}".format(change1h)
-                            formatted_change24h = "{:.2f}".format(change24h)
-                            formatted_change7d = "{:.2f}".format(change7d)
-                            formatted_change30d = "{:.2f}".format(change30d)
-                            formatted_market_cap = "{:.2f}".format(market_cap)
+                            #array of formatted_values
+                            formatted_values = ["{:.2f}".format(value) for value in [price, change1h, change24h, change7d, change30d, market_cap]]
+                            formatted_price, formatted_change1h, formatted_change24h, formatted_change7d, formatted_change30d, formatted_market_cap = formatted_values
+
+
+
                             return formatted_price, formatted_change1h, formatted_change24h, formatted_change7d, formatted_change30d, formatted_market_cap
     except aiohttp.ClientError as e:
-        print(e)
-        return None
+        print(f"Error fetching crypto price: {e}")
+        return [None] * 6  # Return a list of Nones for consistency
 
 async def get_coingecko_crypto_price(symbol):
+    """
+    Get price of a coin (COINGECKO)
+    """
     url = f"https://api.coingecko.com/api/v3/simple/price?ids={symbol}&vs_currencies=usd"
     try:
         async with aiohttp.ClientSession() as session:
@@ -53,6 +59,9 @@ async def get_coingecko_crypto_price(symbol):
         return None
     
 async def fetch_coingecko_ids():
+    """
+    Get id coins from coingecko to use to autocomplete
+    """
     url = "https://api.coingecko.com/api/v3/coins/list"
     try:
         async with aiohttp.ClientSession() as session:
@@ -64,6 +73,9 @@ async def fetch_coingecko_ids():
         return []
 
 async def fetch_nft_collections():
+    """
+    Get the top solana collections in the previous 24h
+    """
     nfturl = "https://api.simplehash.com/api/v0/nfts/collections/top_v2?chains=solana&time_period=24h&limit=100"
     headers = {
         "accept": "application/json",
@@ -86,6 +98,9 @@ async def fetch_nft_collections():
         return {}
     
 async def command_nft_price(nftid, simple_api_key):
+    """
+    Get price of a nft using command /nft colletion 
+    """
     headers = {
         "accept": "application/json",
         "X-API-KEY": simple_api_key,
@@ -102,26 +117,11 @@ async def command_nft_price(nftid, simple_api_key):
     except aiohttp.ClientError as e:
         print(f"HTTP error: {e}")
         return None
-    
-async def command_get_price(symbol):
-    url = f"https://api.coingecko.com/api/v3/simple/price?ids={symbol}&vs_currencies=usd"
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                response_json = await response.json()
-                if symbol in response_json and "usd" in response_json[symbol]:
-                    res = response_json[symbol]["usd"]
-                    formatted_price = "{:.3f}".format(res)
-                    return formatted_price
-                else:
-                    print(f"Error in symbol: {symbol}")
-                    return None
-    except aiohttp.ClientError as e:
-        print(e)
-        return None
-    
 
 async def fetch_chart(crypto, time_frame=30):
+    """
+    Get the historical chart data of a coin 
+    """
     url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
     params = {'vs_currency': 'usd', 'days': time_frame}
     print(time_frame)
@@ -135,10 +135,13 @@ async def fetch_chart(crypto, time_frame=30):
                     print(f"Error: Received status code {response.status}")
                     return None
     except aiohttp.ClientError as e:
-        print(f"HTTP Error: {e}")
+        print(f"HTTP Error while fetching chart: {e}")
         return None
     
 async def get_logo(crypto):
+    """
+    Get metadata from given coin
+    """
     url = f'https://pro-api.coinmarketcap.com/v2/cryptocurrency/info'
     params = {'slug': crypto}
     try:

@@ -51,11 +51,13 @@ async def test(ctx, crypto_symbol):
 
 @bot.command()
 async def crypto_chart(ctx, crypto, time_frame=30):
-    _plot = await plotFunction(crypto,time_frame)
+    data = await fetch_chart(crypto, time_frame)
+    if not data:
+        await ctx.send(f"Error with {crypto}. Please try again later.")
+        return
+    await plotFunction(crypto, data, time_frame)
     _embed, _file = await embedFunction(crypto, time_frame)
     await ctx.send(embed=_embed,file=_file, view = MyView(crypto))
-
-
 
 
 class MyView(discord.ui.View):
@@ -74,13 +76,16 @@ class MyView(discord.ui.View):
     async def reload_30d_button_callback(self, interaction: discord.Interaction, button: discord.ui.button):
         await self.reload_chart(interaction, self.crypto, time_frame=30)
 
-    # Method to reload the chart when buttons are pressed
+    #reload
     async def reload_chart(self, interaction: discord.Interaction, crypto, time_frame=30):
-        data = await fetch_chart(crypto, time_frame)
-        _embed, _file = await embedFunction(crypto, time_frame)
-        _plot = await plotFunction(crypto, time_frame)
         #More than 3 seconds
         await interaction.response.defer()
+        data = await fetch_chart(crypto, time_frame)
+        if not data:  # Check if data fetching failed
+            await interaction.followup.send(f"Error with {crypto}. Please try again later.")
+            return
+        await plotFunction(crypto, data, time_frame)
+        _embed, _file = await embedFunction(crypto, time_frame)
         await interaction.edit_original_response(embed=_embed, attachments=[_file], view=self)
 
 
@@ -161,11 +166,11 @@ async def change_channel_name_loop():
 
         
 @bot.tree.command(description="Coin price", name="price")
-async def price(interaction: discord.Interaction, id: str):
-    id = id.lower()
+async def price(interaction: discord.Interaction, symbol: str):
+    symbol = symbol.lower()
     try:
-        value = await command_get_price(id)
-        await interaction.response.send_message(f"Preço de {id}: {value}$")
+        value = await get_coingecko_crypto_price(symbol)
+        await interaction.response.send_message(f"Preço de {symbol}: {value}$")
     except Exception:
         interaction.response.send_message(f"You need the API ID - coingecko website")
         return
