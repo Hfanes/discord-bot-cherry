@@ -10,16 +10,27 @@ headers = {
 simple_api_key = SIMPLE_API_KEY
 
 
-async def get_crypto_price(id):
+async def get_crypto_price(crypto):
     url = 'https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest'
-    parameters = {'id': id}
+    params = {'slug': crypto}
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers, params=parameters) as response:
+            async with session.get(url, headers=headers, params=params) as response:
                 response_json = await response.json()
-                crypto_price = response_json['data'][str(id)]['quote']['USD']['price']
-                formatted_crypto_price = "{:.2f}".format(crypto_price)
-                return formatted_crypto_price
+                for key in response_json["data"]:
+                            price = response_json["data"][key]['quote']['USD']['price']
+                            change1h = response_json["data"][key]['quote']['USD']['percent_change_1h']
+                            change24h = response_json["data"][key]['quote']['USD']['percent_change_24h']
+                            change7d = response_json["data"][key]['quote']['USD']['percent_change_7d']
+                            change30d = response_json["data"][key]['quote']['USD']['percent_change_30d']
+                            market_cap = response_json["data"][key]['quote']['USD']['market_cap']
+                            formatted_price = "{:.2f}".format(price)
+                            formatted_change1h = "{:.2f}".format(change1h)
+                            formatted_change24h = "{:.2f}".format(change24h)
+                            formatted_change7d = "{:.2f}".format(change7d)
+                            formatted_change30d = "{:.2f}".format(change30d)
+                            formatted_market_cap = "{:.2f}".format(market_cap)
+                            return formatted_price, formatted_change1h, formatted_change24h, formatted_change7d, formatted_change30d, formatted_market_cap
     except aiohttp.ClientError as e:
         print(e)
         return None
@@ -110,9 +121,10 @@ async def command_get_price(symbol):
         return None
     
 
-async def fetch_chart(crypto, days=30):
+async def fetch_chart(crypto, time_frame=30):
     url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
-    params = {'vs_currency': 'usd', 'days': days}
+    params = {'vs_currency': 'usd', 'days': time_frame}
+    print(time_frame)
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
@@ -136,9 +148,9 @@ async def get_logo(crypto):
                     response_json = await response.json()
                     for key in response_json["data"]:
                             logo = response_json["data"][key]["logo"]
-                            name = response_json["data"][key]["name"]
-                            return logo, name
-                    return logo, name
+                            crypto_symbol = response_json["data"][key]["name"]
+                            return logo, crypto_symbol
+                    # return logo, crypto_symbol
                 else:
                     print(f"Error: Received status code {response.status}")
                     return None
