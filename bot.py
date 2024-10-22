@@ -1,9 +1,10 @@
 import os
+import aiohttp
 import discord
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
-from utils.api_utils import command_get_price, command_nft_price, fetch_coingecko_ids, fetch_nft_collections, get_coingecko_crypto_price, get_crypto_price, fetch_chart, get_logo
-from utils.channel_utils import update_channel, plotFunction, embedFunction
+from utils.api_utils import command_coin_price, command_nft_price, fetch_coingecko_ids, fetch_nft_collections, get_coingecko_crypto_price, get_crypto_price, fetch_chart
+from utils.channel_utils import plotFunction, embedFunction
 from utils.database import create_connection, create_tables
 import asyncio
 from discord import app_commands
@@ -15,19 +16,19 @@ TOKEN = os.getenv('OL')
 coins_100_ids = []
 collections_nft = {}
 intents = discord.Intents.all()
-intents.guilds = True  # Enable guilds intent
+intents.guilds = True 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
 @bot.event
 async def on_ready():
     print("Logged in as {0.user}".format(bot))
-    #await setup_data()
+    await bot.tree.sync()
+    await setup_data()
     #asyncio.run(create_tables())
     #change_channel_name_loop.start()
     await asyncio.sleep(80)
-    await bot.tree.sync()
-    
+
 
 async def setup_data():
     global coins_100_ids, collections_nft
@@ -36,7 +37,7 @@ async def setup_data():
 
 #create channel
 @bot.command()
-async def test(ctx, crypto_symbol):
+async def channel(ctx, crypto_symbol):
     guild = ctx.guild
     category = discord.utils.get(guild.categories, name="$$$")
     voice_channel = await guild.create_voice_channel(crypto_symbol,category=category)
@@ -52,17 +53,55 @@ async def test(ctx, crypto_symbol):
 @bot.command()
 async def crypto_chart(ctx, crypto, time_frame=30):
     data = await fetch_chart(crypto, time_frame)
+    name, logo, market_cap, price, high_24h, low_24h, price_change_percentage_24h, price_change_percentage_7d, price_change_percentage_30d = await command_coin_price(crypto)
     if not data:
         await ctx.send(f"Error with {crypto}. Please try again later.")
         return
-    await plotFunction(crypto, data, time_frame)
-    _embed, _file = await embedFunction(crypto, time_frame)
+    await plotFunction(crypto, data, logo)
+    _embed, _file = await embedFunction(time_frame, name, logo, market_cap, price, high_24h, low_24h, price_change_percentage_24h, price_change_percentage_7d, price_change_percentage_30d)
     await ctx.send(embed=_embed,file=_file, view = MyView(crypto))
+
+@bot.tree.command(name='sync', description='Sync')
+async def sync(interaction: discord.Interaction):
+    await bot.tree.sync()
+    print('Command tree synced.')
+
+@bot.tree.command(description="Coin price chart", name="chart")
+async def chart(interaction: discord.Interaction, crypto: str):
+    crypto = crypto.lower()
+    time_frame=30
+    try:
+        data = await fetch_chart(crypto, time_frame)
+        name, logo, market_cap, price, high_24h, low_24h, price_change_percentage_24h, price_change_percentage_7d, price_change_percentage_30d = await command_coin_price(crypto)
+        if not data:
+            await interaction.response.send_message(f"Error with {crypto}. Please try again later.")
+            return
+        await plotFunction(crypto, data, logo)
+        _embed, _file = await embedFunction(time_frame, name, logo, market_cap, price, high_24h, low_24h, price_change_percentage_24h, price_change_percentage_7d, price_change_percentage_30d)
+        await interaction.response.send_message(embed=_embed,file=_file, view = MyView(crypto))
+    except Exception:
+        await interaction.response.send_message(f"You need the API ID - https://www.coingecko.com/")
+        return
+    
+@chart.autocomplete("crypto")
+async def coin_autocomplete(
+    interaction: discord.Interaction,
+    current: str
+) -> typing.List[app_commands.Choice[str]]:
+    filtered_ids = []
+    for id_choice in coins_100_ids:
+     if current.lower() in id_choice.lower():
+        filtered_ids.append(id_choice)
+    choices = [
+        app_commands.Choice[str](name=id_choice, value=id_choice) 
+        for id_choice in filtered_ids[:25]
+    ]
+    return choices
 
 
 class MyView(discord.ui.View):
     def __init__(self, crypto):
-        super().__init__()
+        super().__init__(timeout=None)
         self.crypto = crypto
     @discord.ui.button(label="Reload", style=discord.ButtonStyle.secondary, emoji="🔁")
     async def reload_button_callback(self, interaction: discord.Interaction, button: discord.ui.button):
@@ -77,16 +116,19 @@ class MyView(discord.ui.View):
         await self.reload_chart(interaction, self.crypto, time_frame=30)
 
     #reload
-    async def reload_chart(self, interaction: discord.Interaction, crypto, time_frame=30):
+    async def reload_chart(self, interaction: discord.Interaction, crypto,time_frame=30):
         #More than 3 seconds
         await interaction.response.defer()
         data = await fetch_chart(crypto, time_frame)
-        if not data:  # Check if data fetching failed
+        name, logo, market_cap, price, high_24h, low_24h, price_change_percentage_24h, price_change_percentage_7d, price_change_percentage_30d = await command_coin_price(crypto)
+        if not data:
             await interaction.followup.send(f"Error with {crypto}. Please try again later.")
             return
-        await plotFunction(crypto, data, time_frame)
-        _embed, _file = await embedFunction(crypto, time_frame)
+        await plotFunction(crypto, data, logo)
+        _embed, _file = await embedFunction(time_frame, name, logo, market_cap, price, high_24h, low_24h, price_change_percentage_24h, price_change_percentage_7d, price_change_percentage_30d)
+        # Regenerate the embed and the file
         await interaction.edit_original_response(embed=_embed, attachments=[_file], view=self)
+        
 
 
 
@@ -172,10 +214,10 @@ async def price(interaction: discord.Interaction, symbol: str):
         value = await get_coingecko_crypto_price(symbol)
         await interaction.response.send_message(f"Preço de {symbol}: {value}$")
     except Exception:
-        interaction.response.send_message(f"You need the API ID - coingecko website")
+        await interaction.response.send_message(f"You need the API ID - https://www.coingecko.com/")
         return
-    
-@price.autocomplete("id")
+
+@price.autocomplete("symbol")
 async def coin_autocomplete(
     interaction: discord.Interaction,
     current: str

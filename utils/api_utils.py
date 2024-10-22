@@ -30,13 +30,11 @@ async def get_crypto_price(crypto):
                             #array of formatted_values
                             formatted_values = ["{:.2f}".format(value) for value in [price, change1h, change24h, change7d, change30d, market_cap]]
                             formatted_price, formatted_change1h, formatted_change24h, formatted_change7d, formatted_change30d, formatted_market_cap = formatted_values
-
-
-
                             return formatted_price, formatted_change1h, formatted_change24h, formatted_change7d, formatted_change30d, formatted_market_cap
     except aiohttp.ClientError as e:
         print(f"Error fetching crypto price: {e}")
         return [None] * 6  # Return a list of Nones for consistency
+
 
 async def get_coingecko_crypto_price(symbol):
     """
@@ -137,26 +135,45 @@ async def fetch_chart(crypto, time_frame=30):
     except aiohttp.ClientError as e:
         print(f"HTTP Error while fetching chart: {e}")
         return None
-    
-async def get_logo(crypto):
+
+async def command_coin_price(crypto):
     """
-    Get metadata from given coin
+    Get price, change1h, change24h, change7d, change30d, market_cap, logo, name
     """
-    url = f'https://pro-api.coinmarketcap.com/v2/cryptocurrency/info'
-    params = {'slug': crypto}
-    try:
+    url=f"https://api.coingecko.com/api/v3/coins/{crypto}"
+    try: 
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers, params=params) as response:
+            async with session.get(url) as response:
                 if response.status == 200:
                     response_json = await response.json()
-                    for key in response_json["data"]:
-                            logo = response_json["data"][key]["logo"]
-                            crypto_symbol = response_json["data"][key]["name"]
-                            return logo, crypto_symbol
-                    # return logo, crypto_symbol
-                else:
-                    print(f"Error: Received status code {response.status}")
-                    return None
+                    name = response_json["name"]
+                    logo = response_json["image"]["small"]
+                    price = response_json["market_data"]["current_price"]["usd"]
+                    market_cap = response_json["market_data"]["market_cap"]["usd"]
+                    high_24h = response_json["market_data"]["high_24h"]["usd"]
+                    low_24h = response_json["market_data"]["low_24h"]["usd"]
+                    price_change_percentage_24h = response_json["market_data"]["price_change_percentage_24h"]
+                    price_change_percentage_7d = response_json["market_data"]["price_change_percentage_7d"]
+                    price_change_percentage_30d = response_json["market_data"]["price_change_percentage_30d"]
+
+                    if market_cap >= 1000000000:  # Billions
+                        formatted_market_cap = f"{market_cap / 1000000000:.1f}B"
+                    elif market_cap >= 1000000:  # Millions
+                        formatted_market_cap = f"{market_cap / 1000000:.1f}M"
+                    elif market_cap >= 1000:  # Thousands
+                        formatted_market_cap = f"{int(market_cap / 1000)}K"
+                    else:
+                        formatted_market_cap = str(market_cap)  # Less than 1,000
+
+                    formatted_price = "{:.3f}".format(price) if price > 1 else "{:.7f}".format(price)
+                    formatted_high_24h = "{:.3f}".format(high_24h) if high_24h > 1 else "{:.7f}".format(high_24h)
+                    formatted_low_24h = "{:.3f}".format(low_24h) if low_24h > 1 else "{:.7f}".format(low_24h)
+                    formatted_price_change_percentage_24h = "{:.2f}".format(price_change_percentage_24h)
+                    formatted_price_change_percentage_7d = "{:.2f}".format(price_change_percentage_7d)
+                    formatted_price_change_percentage_30d = "{:.2f}".format(price_change_percentage_30d)
+
+                    return name, logo, formatted_market_cap, formatted_price, formatted_high_24h, formatted_low_24h, formatted_price_change_percentage_24h, formatted_price_change_percentage_7d, formatted_price_change_percentage_30d
+
     except aiohttp.ClientError as e:
         print(f"HTTP Error: {e}")
-        return None
+        return [None] * 9

@@ -1,13 +1,10 @@
 import discord
-from utils.api_utils import fetch_chart, get_logo
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from PIL import Image
 from io import BytesIO
 import requests
-from utils.api_utils import get_crypto_price, fetch_chart, get_logo
-
 
 async def update_channel(bot, channel_id, previous_price, crypto_price, emoji, symbol):
     """
@@ -36,7 +33,7 @@ async def update_channel(bot, channel_id, previous_price, crypto_price, emoji, s
         print("Channel not found.")
 
 
-async def plotFunction(crypto, data, time_frame=30):
+async def plotFunction(crypto, data, logo):
     """
     Generates and saves a chart for the given crypto using provided price data.
     """
@@ -52,7 +49,6 @@ async def plotFunction(crypto, data, time_frame=30):
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%d %b %Y'))
     plt.xticks(rotation=45)
     plt.tight_layout()
-    logo = await get_logo(crypto)
     if logo:
         response = requests.get(logo)
         img = Image.open(BytesIO(response.content)).convert("RGBA")
@@ -66,27 +62,25 @@ async def plotFunction(crypto, data, time_frame=30):
     plt.close()
 
 
-async def embedFunction(crypto, time_frame):
+async def embedFunction(time_frame, name, logo, market_cap, price, high_24h, low_24h, price_change_percentage_24h, price_change_percentage_7d, price_change_percentage_30d):
     """
     Generates an embed with plot image and prices
     """
-    logo, crypto_symbol = await get_logo(crypto)
-    price, change1h, change24h, change7d, change30d, market_cap = await get_crypto_price(crypto)
-    embed = discord.Embed(title=" ")
+    embed = discord.Embed(title="⭐ Market Cap: " + str(market_cap))
     embed.set_author(
-    name=f"{crypto_symbol} - {str(time_frame)} days" if crypto_symbol is not None and time_frame is not None else "Unavailable",
+    name=f"{name} - {str(time_frame)} days" if name is not None and time_frame is not None else "Unavailable",
     url=logo,
     icon_url=logo
     )
-    embed.add_field(name="🚀Price", value=f"${price}" if price is not None else "Unavailable", inline=True)
-    embed.add_field(name="📅Change in 1h", value=f"{change1h}%" if change1h is not None else "Unavailable", inline=True)
-    embed.add_field(name="Change in 24h", value=f"{change24h}%" if change24h is not None else "Unavailable", inline=True)
-    embed.add_field(name="📅Change in 7d", value=f"{change7d}%" if change7d is not None else "Unavailable", inline=True)
-    embed.add_field(name="📅Change in 30d", value=f"{change30d}%" if change30d is not None else "Unavailable", inline=True)
-    embed.add_field(name="⭐Market Cap", value=f"{market_cap}%" if market_cap is not None else "Unavailable", inline=True)
-    embed.set_footer(text="with love to cherry crew🍒")
+    embed.add_field(name="🚀 Price", value=f"${price}" if price is not None else "Unavailable", inline=True)
+    embed.add_field(name="↗️ Highest in 24h", value=f"${high_24h}" if high_24h is not None else "Unavailable", inline=True)
+    embed.add_field(name="↘️ Lowest in 24h", value=f"${low_24h}" if low_24h is not None else "Unavailable", inline=True)
+    embed.add_field(name="📅 Change in 24h", value=f"{price_change_percentage_24h}%" if price_change_percentage_24h is not None else "Unavailable", inline=True)
+    embed.add_field(name="📅 Change in 7d", value=f"{price_change_percentage_7d}%" if price_change_percentage_7d is not None else "Unavailable", inline=True)
+    embed.add_field(name="📅 Change in 30d", value=f"{price_change_percentage_30d}%" if price_change_percentage_30d is not None else "Unavailable", inline=True)
+    embed.set_footer(text="with love to cherry crew 🍒")
     embed.color = 0xA90101
-    # Attach the updated chart image
+    # Attach chart image
     file = discord.File("./crypto_chart.png", filename='crypto_chart.png')
     embed.set_image(url='attachment://crypto_chart.png')
     return embed, file
