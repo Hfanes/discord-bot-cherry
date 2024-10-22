@@ -28,7 +28,7 @@ async def update_channel(bot, channel_id, previous_price, crypto_price, emoji, s
                 print("Not a voice channel.")
             previous_price = crypto_price
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error updating channel {channel_id}: {e}")
     else:
         print("Channel not found.")
 

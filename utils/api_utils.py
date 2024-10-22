@@ -34,6 +34,9 @@ async def get_crypto_price(crypto):
     except aiohttp.ClientError as e:
         print(f"Error fetching crypto price: {e}")
         return [None] * 6  # Return a list of Nones for consistency
+    except Exception as e:
+        print(f"Unexpected error for {crypto}: {e}")
+        return [None] * 6
 
 
 async def get_coingecko_crypto_price(symbol):
@@ -55,6 +58,9 @@ async def get_coingecko_crypto_price(symbol):
     except aiohttp.ClientError as e:
         print(f"HTTP error: {e}")
         return None
+    except Exception as e:
+        print(f"Unexpected error for {symbol}: {e}")
+        return None
     
 async def fetch_coingecko_ids():
     """
@@ -68,6 +74,9 @@ async def fetch_coingecko_ids():
                 return [item['id'] for item in data]
     except aiohttp.ClientError as e:
         print(f"HTTP error: {e}")
+        return []
+    except Exception as e:
+        print(f"Unexpected error for: {e}")
         return []
 
 async def fetch_nft_collections():
@@ -94,6 +103,9 @@ async def fetch_nft_collections():
     except aiohttp.ClientError as e:
         print(f"HTTP error: {e}")
         return {}
+    except Exception as e:
+        print(f"Unexpected error for: {e}")
+        return None
     
 async def command_nft_price(nftid, simple_api_key):
     """
@@ -115,6 +127,9 @@ async def command_nft_price(nftid, simple_api_key):
     except aiohttp.ClientError as e:
         print(f"HTTP error: {e}")
         return None
+    except Exception as e:
+        print(f"Unexpected error for {nftid}: {e}")
+        return None
 
 async def fetch_chart(crypto, time_frame=30):
     """
@@ -134,6 +149,9 @@ async def fetch_chart(crypto, time_frame=30):
                     return None
     except aiohttp.ClientError as e:
         print(f"HTTP Error while fetching chart: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error for {crypto}: {e}")
         return None
 
 async def command_coin_price(crypto):
@@ -173,7 +191,9 @@ async def command_coin_price(crypto):
                     formatted_price_change_percentage_30d = "{:.2f}".format(price_change_percentage_30d)
 
                     return name, logo, formatted_market_cap, formatted_price, formatted_high_24h, formatted_low_24h, formatted_price_change_percentage_24h, formatted_price_change_percentage_7d, formatted_price_change_percentage_30d
-
     except aiohttp.ClientError as e:
         print(f"HTTP Error: {e}")
+        return [None] * 9
+    except Exception as e:
+        print(f"Unexpected error for {crypto}: {e}")
         return [None] * 9
