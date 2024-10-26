@@ -1,10 +1,25 @@
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
 # Ignore .env files
 .env
 # IDE and editor folders
 .idea/
+
+# Virtual environment directories
+venv/
+env/
 
 # Python bytecode and cache files
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Other common IDE files
+.DS_Store  # macOS
+Thumbs.db  # Windows
+*.swp      # vim
+*.sublime-workspace
