@@ -22,21 +22,14 @@ async def get_crypto_price(crypto):
                 response_json = await response.json()
                 for key in response_json["data"]:
                             price = response_json["data"][key]['quote']['USD']['price']
-                            change1h = response_json["data"][key]['quote']['USD']['percent_change_1h']
-                            change24h = response_json["data"][key]['quote']['USD']['percent_change_24h']
-                            change7d = response_json["data"][key]['quote']['USD']['percent_change_7d']
-                            change30d = response_json["data"][key]['quote']['USD']['percent_change_30d']
-                            market_cap = response_json["data"][key]['quote']['USD']['market_cap']
-                            #array of formatted_values
-                            formatted_values = ["{:.2f}".format(value) for value in [price, change1h, change24h, change7d, change30d, market_cap]]
-                            formatted_price, formatted_change1h, formatted_change24h, formatted_change7d, formatted_change30d, formatted_market_cap = formatted_values
-                            return formatted_price, formatted_change1h, formatted_change24h, formatted_change7d, formatted_change30d, formatted_market_cap
+                            formatted_price = "{:.3f}".format(price) if price > 0.001 else "{:.8f}".format(price)
+                            return formatted_price
     except aiohttp.ClientError as e:
         print(f"Error fetching crypto price: {e}")
-        return [None] * 6  # Return a list of Nones for consistency
+        return [None]
     except Exception as e:
         print(f"Unexpected error for {crypto}: {e}")
-        return [None] * 6
+        return [None]
 
 
 async def get_coingecko_crypto_price(symbol):
@@ -49,8 +42,8 @@ async def get_coingecko_crypto_price(symbol):
             async with session.get(url) as response:
                 response_json = await response.json()
                 if symbol in response_json and "usd" in response_json[symbol]:
-                    res = response_json[symbol]["usd"]
-                    formatted_price = "{:.3f}".format(res)
+                    price = response_json[symbol]["usd"]
+                    formatted_price = "{:.3f}".format(price) if price > 0.001 else "{:.8f}".format(price)
                     return formatted_price
                 else:
                     print(f"Error with symbol: {symbol}")

@@ -1,3 +1,4 @@
+from decimal import Decimal
 import discord
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
@@ -6,31 +7,42 @@ from PIL import Image
 from io import BytesIO
 import requests
 
-async def update_channel(bot, channel_id, previous_price, crypto_price, emoji, symbol):
+from utils.database import create_connection
+
+async def update_channel(bot, channel_id, previous_price, crypto_price, symbol):
+    print("update_channel")
     """
     Update channel with new price
     """
     channel = bot.get_channel(channel_id)
     if channel:
         try:
+            emoji = ""
             if previous_price is not None:
+                previous_price = Decimal(previous_price)
+                crypto_price = Decimal(crypto_price)
                 if crypto_price > previous_price:
-                    emoji = "🟢↘️"
+                    emoji = "🟢↗️"
                 elif crypto_price < previous_price:
-                    emoji = "🔴↗️"
+                    emoji = "🔴↘️"
+                else: 
+                    emoji
 
             new_channel_name = f"{emoji}{symbol}: ${crypto_price}"
 
             if isinstance(channel, discord.VoiceChannel):
                 await channel.edit(name=new_channel_name)
                 print(f"Channel updated: {new_channel_name}")
+                return new_channel_name
             else:
                 print("Not a voice channel.")
-            previous_price = crypto_price
+                return 
+        
         except Exception as e:
             print(f"Error updating channel {channel_id}: {e}")
     else:
         print("Channel not found.")
+        return None
 
 
 async def plotFunction(crypto, data, logo):
