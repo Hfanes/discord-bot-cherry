@@ -1,9 +1,9 @@
 import asyncpg
-from config.settings import DB_URL
+from config.settings import DATABASE_URL
 
 async def create_connection():
     try:
-        conn = await asyncpg.connect(DB_URL, ssl="require")
+        conn = await asyncpg.connect(DATABASE_URL, ssl="require")
         print("success"+ str(conn))
         return conn 
     except Exception as e:
