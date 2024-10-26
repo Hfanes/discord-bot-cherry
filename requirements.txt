@@ -1,9 +1,10 @@
 aiohttp==3.9.1
 asyncio==3.4.3
 discord.py==2.3.2
-python-dotenv==1.0.0
-requests==2.31.0
+requests==2.32.3
 yarl==1.9.4
 asyncpg
 matplotlib
 Pillow
+python-dateutil==2.9.0.post0
+python-dotenv==1.0.1
