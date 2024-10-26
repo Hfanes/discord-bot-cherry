@@ -29,6 +29,8 @@ Example: /create bitcoin
 /help Get help
 ```
 
+## Voice channels preview
+
 ![preview voice channels name with price](./preview_images/preview1.png)
 
 ## Chart
