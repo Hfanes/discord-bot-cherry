@@ -24,7 +24,7 @@ async def on_ready():
     print("Logged in as {0.user}".format(bot))
     await bot.tree.sync()
     await setup_data()
-    #await create_tables()
+    await create_tables()
     change_channel_name_loop.start()
 
 
@@ -39,9 +39,9 @@ async def create(interaction: discord.Interaction, crypto: str):
     guild = interaction.guild
     try:
         if crypto.lower() in ["solana", "bitcoin", "ethereum"]:
-            price = await get_crypto_price(crypto)
+            price, symbol_display = await get_crypto_price(crypto)
         else:
-            price = await get_coingecko_crypto_price(crypto)
+            price, symbol_display = await get_coingecko_crypto_price(crypto)
 
         if price is None:
             await interaction.response.send_message(f"Symbol '{crypto}' is invalid or not supported.")
@@ -55,7 +55,7 @@ async def create(interaction: discord.Interaction, crypto: str):
         #server and channel information into the database
         await insert_server_channel(server_id, channel_id, crypto, guild.name, price)
         # Set the channel name with the price
-        await voice_channel.edit(name=f"{crypto.upper()}: ${price}")
+        await voice_channel.edit(name=f"{symbol_display.upper()}: ${price}")
         await interaction.response.send_message(f"Voice channel created for {crypto}!")
 
     except discord.Forbidden:
@@ -83,7 +83,7 @@ async def coin_autocomplete(
 #SELECT * FROM users WHERE id = 12345; DROP TABLE servers; -- 
 #vs
 #SELECT * FROM users WHERE id = '12345; DROP TABLE servers; --'
-async def insert_server_channel(server_id, channel_id, crypto_symbol, server_name, initial_price):
+async def insert_server_channel(server_id, channel_id, crypto_id, server_name, initial_price):
     conn = await create_connection()
     try:
         # Insert the server info, avoiding duplicates
@@ -95,11 +95,14 @@ async def insert_server_channel(server_id, channel_id, crypto_symbol, server_nam
         await conn.execute(insert_server_query, server_id, server_name)
 
         insert_channel_query = """
-            INSERT INTO channels (server_id, channel_id, crypto_symbol, previous_price) 
+            INSERT INTO channels (server_id, channel_id, crypto_id, previous_price) 
             VALUES ($1, $2, $3, $4)
         """
-        await conn.execute(insert_channel_query, server_id, channel_id, crypto_symbol, initial_price)
+        await conn.execute(insert_channel_query, server_id, channel_id, crypto_id, initial_price)
+        print(f"Voice channel created for {crypto_id}!")
+
     except Exception as e:
+        print(f"Error inserting {crypto_id} in {server_id}: {e}")
         await conn.close()
     finally:
         print("con closed")
@@ -113,7 +116,7 @@ async def change_channel_name_loop():
     try:
         # Retrieve all channels for all servers
         channels = await conn.fetch("""
-            SELECT c.channel_id, c.crypto_symbol, c.previous_price, s.discord_id, s.name
+            SELECT c.channel_id, c.crypto_id, c.previous_price, s.discord_id, s.name
             FROM channels c
             INNER JOIN servers s ON c.server_id = s.discord_id
         """)
@@ -124,25 +127,20 @@ async def change_channel_name_loop():
         
         for row in channels:
             channel_id = int(row['channel_id'])
-            crypto_symbol = row['crypto_symbol']
+            crypto_id = row['crypto_id']
             previous_price = row['previous_price']
             server_name = row['name']
             discord_id = int(row['discord_id'])
-            # print("Current row: " + str(server_name) +  ", " + str(crypto_symbol))
 
-            if crypto_symbol.lower() in ["solana", "bitcoin", "ethereum"]:
-                current_price = await get_crypto_price(crypto_symbol)
+            if crypto_id.lower() in ["solana", "bitcoin", "ethereum"]:
+                current_price, symbol_display = await get_crypto_price(crypto_id)
             else: 
-                current_price = await get_coingecko_crypto_price(crypto_symbol)
+                current_price, symbol_display = await get_coingecko_crypto_price(crypto_id)
             
             if current_price is not None:
-                if crypto_symbol == "bitcoin":
-                    activity = discord.Activity(type=discord.ActivityType.watching, name=(f"BTC: {current_price}"))
-                    await bot.change_presence(activity=activity)
-                name_updated = await update_channel(bot, channel_id, previous_price, current_price, symbol=crypto_symbol.upper())
+                name_updated = await update_channel(bot, channel_id, previous_price, current_price, symbol_display)
                 if name_updated is None:
                     print(f"Channel {channel_id} not found in Discord; verifying permissions.")
-                    
                     # Check if bot has permission to manage channels in this guild
                     guild = bot.get_guild(discord_id)
                     if guild and guild.me.guild_permissions.manage_channels:

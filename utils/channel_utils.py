@@ -7,9 +7,7 @@ from PIL import Image
 from io import BytesIO
 import requests
 
-from utils.database import create_connection
-
-async def update_channel(bot, channel_id, previous_price, crypto_price, symbol):
+async def update_channel(bot, channel_id, previous_price, crypto_price, symbol_display):
     print("update_channel")
     """
     Update channel with new price
@@ -28,7 +26,7 @@ async def update_channel(bot, channel_id, previous_price, crypto_price, symbol):
                 else: 
                     emoji
 
-            new_channel_name = f"{emoji}{symbol}: ${crypto_price}"
+            new_channel_name = f"{emoji}{symbol_display.upper()}: ${crypto_price}"
 
             if isinstance(channel, discord.VoiceChannel):
                 await channel.edit(name=new_channel_name)

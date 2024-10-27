@@ -27,11 +27,12 @@ async def create_tables():
         id SERIAL PRIMARY KEY,
         server_id BIGINT REFERENCES servers(discord_id) ON DELETE CASCADE,
         channel_id BIGINT NOT NULL,
-        crypto_symbol VARCHAR(10) NOT NULL,
-        previous_price DECIMAL(15, 6),
+        crypto_id VARCHAR(40) NOT NULL,
+        previous_price DECIMAL(15, 10),
         UNIQUE (server_id, channel_id) -- Ensure a channel is only added once per server
     );
     """
+    
     # create_alerts_table = """
     # CREATE TABLE IF NOT EXISTS alerts (
     #     id SERIAL PRIMARY KEY,

@@ -22,38 +22,37 @@ async def get_crypto_price(crypto):
                 response_json = await response.json()
                 for key in response_json["data"]:
                             price = response_json["data"][key]['quote']['USD']['price']
+                            symbol = response_json["data"][key]['symbol']
                             formatted_price = "{:.3f}".format(price) if price > 0.001 else "{:.8f}".format(price)
-                            return formatted_price
+                            return formatted_price, symbol
     except aiohttp.ClientError as e:
         print(f"Error fetching crypto price: {e}")
-        return [None]
+        return None, None
     except Exception as e:
         print(f"Unexpected error for {crypto}: {e}")
-        return [None]
+        return None, None
 
 
-async def get_coingecko_crypto_price(symbol):
+async def get_coingecko_crypto_price(id):
     """
     Get price of a coin (COINGECKO)
     """
-    url = f"https://api.coingecko.com/api/v3/simple/price?ids={symbol}&vs_currencies=usd"
+    url = f"https://api.coingecko.com/api/v3/coins/{id}"
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 response_json = await response.json()
-                if symbol in response_json and "usd" in response_json[symbol]:
-                    price = response_json[symbol]["usd"]
-                    formatted_price = "{:.3f}".format(price) if price > 0.001 else "{:.8f}".format(price)
-                    return formatted_price
-                else:
-                    print(f"Error with symbol: {symbol}")
-                    return None
+                price = response_json["market_data"]["current_price"]["usd"]
+                symbol_display = response_json["symbol"]
+                formatted_price = "{:.3f}".format(price) if price > 0.001 else "{:.8f}".format(price)
+                return formatted_price, symbol_display
     except aiohttp.ClientError as e:
         print(f"HTTP error: {e}")
-        return None
+        return None, None
     except Exception as e:
-        print(f"Unexpected error for {symbol}: {e}")
-        return None
+        print(f"Error with symbol: {id}")
+        return None, None
+        
     
 async def fetch_coingecko_ids():
     """
