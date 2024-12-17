@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from utils.api_utils import command_coin_price, command_nft_price, fetch_coingecko_ids, fetch_nft_collections, get_coingecko_crypto_price, get_crypto_price, fetch_chart
 from utils.channel_utils import plotFunction, embedFunction, update_channel
 from utils.database import create_connection, create_tables
+from utils.migrations import run_migrations
 import asyncio
 from discord import app_commands
 import typing
@@ -26,6 +27,8 @@ async def on_ready():
     await setup_data()
     await create_tables()
     change_channel_name_loop.start()
+    #await run_migrations()
+    
 
 
 async def setup_data():
@@ -139,6 +142,7 @@ async def change_channel_name_loop():
             
             if current_price is not None:
                 name_updated = await update_channel(bot, channel_id, previous_price, current_price, symbol_display)
+                # delete channel from db
                 if name_updated is None:
                     print(f"Channel {channel_id} not found in Discord; verifying permissions.")
                     # Check if bot has permission to manage channels in this guild
@@ -264,7 +268,7 @@ async def price(interaction: discord.Interaction, symbol: str):
         if not value :
             await interaction.response.send_message(f"Error with {symbol}. Please try again later. Or verify coin ID")
             return
-        await interaction.response.send_message(f"Price off {symbol}: {value}$")
+        await interaction.response.send_message(f"{symbol.upper()} Price: {value[0]} $")
     except Exception:
         await interaction.response.send_message(f"You need the API ID - https://www.coingecko.com/")
         return
