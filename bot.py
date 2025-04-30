@@ -47,9 +47,9 @@ async def setup_data():
 @bot.tree.command(description="chatgpt", name="chat")
 async def chat(interaction: discord.Interaction, prompt: str):
     try:
-        # Send initial response to acknowledge the interaction
         await interaction.response.defer()
-        original_response = await interaction.followup.send("Thinking...")
+        user_name = interaction.user.display_name
+        original_response = await interaction.followup.send(f"{user_name} : {prompt}\n\n Thinking...")
 
         completion = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -60,7 +60,6 @@ async def chat(interaction: discord.Interaction, prompt: str):
         full_response = ""
 
         full_response = ""
-        # Stream the response from OpenAI
         for chunk in completion:
             if chunk.choices[0].delta.content is not None:
                 # Append the new content to the response
@@ -70,14 +69,16 @@ async def chat(interaction: discord.Interaction, prompt: str):
                 # Update the message with new content - edit every ~10 characters to avoid rate limits
                 if (len(full_response) % 10 == 0 or chunk.choices[0].finish_reason == "stop") and full_response.strip():
                     try:
-                        await original_response.edit(content=full_response if full_response.strip() else "No response generated.")
+                        formatted_response = f"{user_name} : {prompt}\n\n {full_response if full_response.strip() else 'No response generated.'}"
+                        await original_response.edit(content=formatted_response)
                     except Exception as edit_error:
                         print(f"Edit error: {edit_error}")
 
         try:
             # Only edit if there's actual content, otherwise provide a fallback message
             final_content = full_response if full_response.strip() else "No response generated."
-            await original_response.edit(content=full_response)
+            formatted_final_response = f"{user_name} : {prompt}\n\n {final_content}"
+            await original_response.edit(content=formatted_final_response)
         except Exception as final_edit_error:
             print(f"Final edit error: {final_edit_error}")
     except Exception as e:
