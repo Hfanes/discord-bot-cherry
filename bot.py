@@ -10,6 +10,7 @@ import asyncio
 from discord import app_commands
 import typing
 import openai  
+import webserver
 
 
 
@@ -367,4 +368,5 @@ async def nft_autocomplete(
     ]
     return choicesnft
 
+webserver.keep_live()
 bot.run(TOKEN)
