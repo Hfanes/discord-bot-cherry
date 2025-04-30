@@ -9,8 +9,8 @@ from utils.migrations import run_migrations
 import asyncio
 from discord import app_commands
 import typing
-import openai  
 from webserver import keep_alive
+from openai import OpenAI
 
 
 
@@ -21,7 +21,6 @@ collections_nft = {}
 intents = discord.Intents.all()
 intents.guilds = True 
 bot = commands.Bot(command_prefix="!", intents=intents)
-from openai import OpenAI
 
 client = OpenAI(
     api_key = os.getenv('OPENAI')
@@ -368,5 +367,5 @@ async def nft_autocomplete(
     ]
     return choicesnft
 
-keep_live()
+keep_alive()
 bot.run(TOKEN)
