@@ -9,6 +9,8 @@ from utils.migrations import run_migrations
 import asyncio
 from discord import app_commands
 import typing
+import openai  
+
 
 
 load_dotenv()
@@ -18,6 +20,12 @@ collections_nft = {}
 intents = discord.Intents.all()
 intents.guilds = True 
 bot = commands.Bot(command_prefix="!", intents=intents)
+from openai import OpenAI
+
+client = OpenAI(
+    api_key = os.getenv('OPENAI')
+)
+
 
 
 @bot.event
@@ -35,6 +43,47 @@ async def setup_data():
     global coins_100_ids, collections_nft
     coins_100_ids = await fetch_coingecko_ids()
     collections_nft = await fetch_nft_collections()
+
+@bot.tree.command(description="chatgpt", name="chat")
+async def chat(interaction: discord.Interaction, prompt: str):
+    try:
+        # Send initial response to acknowledge the interaction
+        await interaction.response.defer()
+        original_response = await interaction.followup.send("Thinking...")
+
+        completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        stream=True,
+        )        
+        print(completion)
+        full_response = ""
+
+        full_response = ""
+        # Stream the response from OpenAI
+        for chunk in completion:
+            if chunk.choices[0].delta.content is not None:
+                # Append the new content to the response
+                full_response += chunk.choices[0].delta.content
+                print(chunk.choices[0].delta.content, end="")  # Print content in real time
+                
+                # Update the message with new content - edit every ~10 characters to avoid rate limits
+                if (len(full_response) % 10 == 0 or chunk.choices[0].finish_reason == "stop") and full_response.strip():
+                    try:
+                        await original_response.edit(content=full_response if full_response.strip() else "No response generated.")
+                    except Exception as edit_error:
+                        print(f"Edit error: {edit_error}")
+
+        try:
+            # Only edit if there's actual content, otherwise provide a fallback message
+            final_content = full_response if full_response.strip() else "No response generated."
+            await original_response.edit(content=full_response)
+        except Exception as final_edit_error:
+            print(f"Final edit error: {final_edit_error}")
+    except Exception as e:
+        # Handle errors (e.g., OpenAI API errors or Discord issues)
+        await interaction.response.send_message(f"An error occurred: {e} + prompt: {prompt}")
+
 
 
 @bot.tree.command(description="Create VC price", name="create")

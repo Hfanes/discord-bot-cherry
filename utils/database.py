@@ -3,7 +3,10 @@ from config.settings import DATABASE_URL
 
 async def create_connection():
     try:
-        conn = await asyncpg.connect(DATABASE_URL, ssl="require")
+        # heroku
+        # conn = await asyncpg.connect(DATABASE_URL, ssl="require")
+        # local
+        conn = await asyncpg.connect(DATABASE_URL)
         print("success"+ str(conn))
         return conn 
     except Exception as e:
@@ -28,7 +31,7 @@ async def create_tables():
         server_id BIGINT REFERENCES servers(discord_id) ON DELETE CASCADE,
         channel_id BIGINT NOT NULL,
         crypto_id VARCHAR(40) NOT NULL,
-        previous_price DECIMAL(15, 10),
+        previous_price DECIMAL(20, 10),
         UNIQUE (server_id, channel_id) -- Ensure a channel is only added once per server
     );
     """
