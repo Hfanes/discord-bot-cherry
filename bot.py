@@ -33,8 +33,8 @@ async def on_ready():
     print("Logged in as {0.user}".format(bot))
     await bot.tree.sync()
     await setup_data()
-    #await create_tables()
-    #change_channel_name_loop.start()
+    await create_tables()
+    change_channel_name_loop.start()
     #await run_migrations()
     
 

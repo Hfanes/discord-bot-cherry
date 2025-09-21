@@ -6,6 +6,7 @@ load_dotenv()
 CMC_API_KEY = os.getenv('CMC_API_KEY')
 SIMPLE_API_KEY = os.getenv('simple_api_key')
 DATABASE_URL = os.getenv('DATABASE_URL')
+TOKEN = os.getenv('OL')
 
 # SOL_CHANNEL_ID = int(os.getenv('SOL'))
 # ETH_CHANNEL_ID = int(os.getenv('ETH'))
@@ -15,5 +16,3 @@ DATABASE_URL = os.getenv('DATABASE_URL')
 # W_CHANNEL_ID = int(os.getenv('W'))
 # WIF_CHANNEL_ID = int(os.getenv('WIF'))
 # JUP_CHANNEL_ID = int(os.getenv('JUP'))
-
-TOKEN = os.getenv('OL')

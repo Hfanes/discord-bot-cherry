@@ -3,10 +3,10 @@ from config.settings import DATABASE_URL
 
 async def create_connection():
     try:
-        # heroku
-        # conn = await asyncpg.connect(DATABASE_URL, ssl="require")
+        # deploy
+        conn = await asyncpg.connect(DATABASE_URL, ssl="require")
         # local
-        conn = await asyncpg.connect(DATABASE_URL)
+        #conn = await asyncpg.connect(DATABASE_URL)
         print("success"+ str(conn))
         return conn 
     except Exception as e:
