@@ -9,7 +9,7 @@ from utils.migrations import run_migrations
 import asyncio
 from discord import app_commands
 import typing
-from webserver import keep_alive
+# from webserver import keep_alive
 from openai import OpenAI
 
 
@@ -396,5 +396,5 @@ async def nft_autocomplete(
     ]
     return choicesnft
 
-keep_alive()
+# keep_alive()
 bot.run(TOKEN)
