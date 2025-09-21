@@ -33,8 +33,8 @@ async def on_ready():
     print("Logged in as {0.user}".format(bot))
     await bot.tree.sync()
     await setup_data()
-    await create_tables()
-    change_channel_name_loop.start()
+    #await create_tables()
+    #change_channel_name_loop.start()
     #await run_migrations()
     
 
@@ -322,6 +322,34 @@ async def price(interaction: discord.Interaction, symbol: str):
     except Exception:
         await interaction.response.send_message(f"You need the API ID - https://www.coingecko.com/")
         return
+
+@bot.tree.command(description="Coin price CMC", name="pricecmc")
+async def price(interaction: discord.Interaction, symbol: str):
+    symbol = symbol.lower()
+    try:
+        value = await get_crypto_price(crypto)
+        if not value :
+            await interaction.response.send_message(f"Error with {symbol}. Please try again later. Or verify coin ID")
+            return
+        await interaction.response.send_message(f"{symbol.upper()} Price: {value[0]} $")
+    except Exception:
+        await interaction.response.send_message(f"You need the API ID - https://coinmarketcap.com/")
+        return
+
+@bot.command(name="pricecmc", help="Coin price CMC")
+async def pricecmc(ctx, symbol: str):
+    symbol = symbol.lower()
+    try:
+        value = await get_crypto_price(symbol)  
+        if not value:
+            await ctx.send(f"Error with {symbol}. Please try again later. Or verify coin ID")
+            return
+        await ctx.send(f"{symbol.upper()} Price: {value[0]} $")
+    except Exception:
+        await ctx.send(f"You need the API ID - https://coinmarketcap.com/")
+        return
+
+
 
 @price.autocomplete("symbol")
 async def coin_autocomplete(
