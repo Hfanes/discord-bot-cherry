@@ -1,0 +1,6 @@
+aiohttp==3.12.14
+discord.py==2.4.0
+matplotlib==3.9.2
+Pillow==11.0.0
+python-dotenv==1.0.1
+Requests==2.32.4

@@ -5,6 +5,8 @@ __pycache__/
 
 # Ignore .env files
 .env
+# Runtime data
+data/
 # IDE and editor folders
 .idea/
 
